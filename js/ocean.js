@@ -56,20 +56,26 @@ float seaWave(vec2 p) {
   float calm = 0.4 + 0.8 * seaNoise(p * 0.012 + 3.1);
   return clamp(w * calm, -1.0, 1.0);
 }`;
-// 卡通海的水紋：四道方向、長度不同的正弦波（約 2–9 公尺），斜率直接微分出來；座標先用雜訊扭一下才不規律。
-// 回傳 xy＝斜率，z＝高度（-1..1，浪尖白沫用）。遠處一個像素比波長還大時那道波會變成雜點閃爍，照像素大小（fwidth）把它淡掉
+// 卡通海的水紋：三層雜訊疊起來（約 7、3.5、1.7 公尺），每層座標都轉一個不同的角度、各自往不同方向漂，斜率直接微分出來。
+// 原本是四道正弦波，交錯起來不管怎麼扭都看得出規律的格子；雜訊本身沒有方向性，每層再轉個角度，格線也不會對齊。
+// 回傳 xy＝斜率，z＝高度（約 -1..1，浪尖白沫用）。遠處一個像素比那一層的大小還大時會變成雜點閃爍，照像素大小（fwidth）把它淡掉
 const TOON_GLSL = /* glsl */`
+vec3 seaNoiseD(vec2 p) {
+  vec2 i = floor(p), f = fract(p), u = f * f * (3.0 - 2.0 * f), du = 6.0 * f * (1.0 - f);
+  float a = seaHash(i), b = seaHash(i + vec2(1, 0)), c = seaHash(i + vec2(0, 1)), d = seaHash(i + 1.0);
+  return vec3(a + (b - a) * u.x + (c - a) * u.y + (a - b - c + d) * u.x * u.y,
+              du * (vec2(b - a, c - a) + (a - b - c + d) * u.yx));
+}
 vec3 toonWave(vec2 p) {
-  vec2 q = p + 2.5 * vec2(seaNoise(p * 0.06 + uTime * 0.05), seaNoise(p * 0.06 + vec2(5.2, 1.3) - uTime * 0.05));
-  float px = length(fwidth(p)) / 6.2832;
+  vec2 q = p + 3.0 * vec2(seaNoise(p * 0.03 + uTime * 0.03), seaNoise(p * 0.03 + vec2(5.2, 1.3) - uTime * 0.03));
+  float px = length(fwidth(p));
   vec3 r = vec3(0.0);
-  vec2 k; float a, ph, f;
-  #define TOON_W(K, A, W, H) k = K; a = A; ph = dot(q, k) + uTime * W; f = 1.0 - smoothstep(0.06, 0.2, px * length(k)); r += vec3(k * a * cos(ph), H * sin(ph)) * f;
-  TOON_W(vec2(0.62, 0.30), 0.17, 1.1, 0.32)
-  TOON_W(vec2(-0.42, 1.02), 0.09, 1.5, 0.28)
-  TOON_W(vec2(1.55, -1.05), 0.04, 2.1, 0.22)
-  TOON_W(vec2(-2.4, -1.7), 0.018, 2.7, 0.18)
-  return r;
+  mat2 R; vec3 n; float s, a, f;
+  #define TOON_N(ANG, S, A, V) R = mat2(cos(ANG), -sin(ANG), sin(ANG), cos(ANG)); s = S; a = A; n = seaNoiseD(R * q * s + V * uTime); f = 1.0 - smoothstep(0.03, 0.12, px * s); r += vec3((n.yz * R) * s * a, (n.x * 2.0 - 1.0) * 1.4) * f;
+  TOON_N(0.53, 0.14, 1.1, vec2(0.21, 0.13))
+  TOON_N(2.17, 0.29, 0.55, vec2(-0.17, 0.26))
+  TOON_N(4.01, 0.6, 0.25, vec2(0.33, -0.22))
+  return vec3(r.xy, r.z / 3.0);
 }`;
 
 // 把海面效果接到一個 MeshStandardMaterial 上。
@@ -128,8 +134,12 @@ float seaFoam = 0.0;`)
   vec3 tw = toonWave(vSeaXZ);
   vec2 sl = tw.xy;
   float dl = dot(normalize(vec3(-sl.x, 1.0, -sl.y)), uSunDir) - uSunDir.y;
-  diffuseColor.rgb *= 1.0 + 0.07 * step(0.03, dl) - 0.06 * step(dl, -0.03);
-  float glint = step(0.22, dl) * step(10.0, shoreD);
+  // 拉遠時正弦波交錯看起來像整齊的格子：一個像素超過約 0.2 公尺後，明暗只留在大範圍雜訊圈出的幾片海上，再遠就淡掉
+  float farK = smoothstep(0.2, 0.55, length(fwidth(vSeaXZ)));
+  float patchy = smoothstep(0.42, 0.62, seaNoise(vSeaXZ * 0.018 + vec2(uTime * 0.012, 0.0)));
+  float toonK = mix(1.0, patchy * (1.0 - smoothstep(0.55, 1.4, length(fwidth(vSeaXZ))) * 0.75), farK);
+  diffuseColor.rgb *= 1.0 + (0.07 * step(0.03, dl) - 0.06 * step(dl, -0.03)) * toonK;
+  float glint = step(0.22, dl) * step(10.0, shoreD) * toonK;
   // 浪尖白沫：邊緣切齊，像色塊
   seaFoam = step(0.62, tw.z) * step(0.6, seaNoise(vSeaXZ * 0.035 + uTime * 0.02)) * step(10.0, shoreD) * 0.75; // 只有浪高、又在浪大的那幾片海才起白沫
   // 岸邊：貼著岸一圈白浪花，外面一道道浪花線慢慢往外推、越遠越淡；用大範圍的水紋把線切成一段一段

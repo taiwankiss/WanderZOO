@@ -343,15 +343,77 @@ setSky(ui.slot, true);
 const start = overviewPose();
 camera.position.copy(start.pos);
 controls.target.copy(start.target);
-// 進場：從側面、遠一點的地方，鏡頭緩緩繞半圈轉進全景（取代原本的歡迎卡片）
-let intro = { k: 0, dur: 4.2, from: start.pos.clone().sub(start.target), target: start.target.clone() };
+// 進場：從高空幾乎正上方往下 zoom in，一路穿過三層雲，降到全景的角度（取代原本從側面繞過來）
+let intro = { k: 0, dur: 5, from: start.pos.clone().sub(start.target), target: start.target.clone() };
 const AUTO_SPIN = (2 * Math.PI / 60) * controls.autoRotateSpeed; // 自動旋轉每秒轉幾弧度（OrbitControls 的算法）
-const INTRO_TURN = 0.42; // 進場額外多轉的角度（加上等速那段，總共約 0.6 弧度；使用者覺得轉太多、等太久，從 1.5 弧度、6.5 秒減到這樣）
-const spinV = new THREE.Vector3();
+const INTRO_TURN = 0.3; // 進場時順便多轉的角度（使用者覺得轉太多、等太久，一路從 1.5 弧度減下來）
+const INTRO_HIGH = 2.1, INTRO_TOP = 0.3; // 起點的距離是全景的幾倍、離正上方幾弧度
+const fromSph = new THREE.Spherical().setFromVector3(intro.from), sph = new THREE.Spherical();
+// 進度 k（0–1）時鏡頭的位置：一開始就往下衝、快到全景時慢慢停
+function introPos(k, out) {
+  const u = Math.pow(1 - k, 2.4);
+  const spin = INTRO_TURN * u + AUTO_SPIN * intro.dur * (1 - k); // 加一段等速的量，結尾的轉速剛好接上自動旋轉
+  sph.set(fromSph.radius * (1 + (INTRO_HIGH - 1) * u), fromSph.phi + (INTRO_TOP - fromSph.phi) * u, fromSph.theta + spin);
+  return out.setFromSpherical(sph).add(intro.target);
+}
+// 四層雲：放在鏡頭路徑上，每層是一片面向鏡頭、圓滾滾的雲團（每團 4–6 顆球，和場景裡的雲同一種畫法），
+// 中間留幾個破洞看得到下面；大小照「上一層到這一層的距離」算，鏡頭看過去剛好蓋滿畫面。鏡頭靠近時整層淡掉，像穿過去
+const cloudLayers = [];
+{
+  const R = (() => { let s = 7; return () => ((s = (s * 16807) % 2147483647) / 2147483647); })();
+  const geo = new THREE.SphereGeometry(1, 18, 12), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), v = new THREE.Vector3(), sc = new THREE.Vector3();
+  const tanH = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), aspect = Math.max(1, stage.clientWidth / Math.max(1, stage.clientHeight));
+  let prev = introPos(0, new THREE.Vector3());
+  for (const [li, k] of [0.06, 0.15, 0.26, 0.4].entries()) {
+    const at = introPos(k, new THREE.Vector3());
+    const look = intro.target.clone().sub(at).normalize();
+    const gap = Math.max(40, at.distanceTo(prev) * 1.6);
+    prev = at;
+    const hh = gap * tanH * 1.25, hw = hh * aspect; // 這一層要蓋住的半高、半寬
+    const right = new THREE.Vector3().crossVectors(look, THREE.Object3D.DEFAULT_UP).normalize(), up = new THREE.Vector3().crossVectors(right, look);
+    // 第一層整片蓋滿（布幕拉開時看到的是雲海），後面幾層才開破洞
+    const holes = li === 0 ? [] : [0, 1].map(() => [(R() - 0.5) * hw, (R() - 0.5) * hh, hh * (0.3 + R() * 0.2)]);
+    const N = 4000;
+    const mesh = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: '#eef4f8', emissive: '#ffffff', emissiveIntensity: 0.72, transparent: true, depthWrite: false, fog: false }), N);
+    let n = 0;
+    // 雲團排在錯開的格子上（不會有一大片空的），每格一團
+    const cell = hh * 0.2;
+    for (let gy = -hh * 1.6; gy <= hh * 1.6; gy += cell) for (let gx = -hw * 1.4; gx <= hw * 1.4; gx += cell) {
+      const a = gx + (R() - 0.5) * cell * 0.8, b = gy + (R() - 0.5) * cell * 0.8;
+      if (n > N - 6 || holes.some(([hx, hy, hr]) => Math.hypot(a - hx, b - hy) < hr)) continue;
+      const r = cell * (0.55 + R() * 0.3), c = v.copy(at).addScaledVector(right, a).addScaledVector(up, b).addScaledVector(look, (R() - 0.5) * hh * 0.3).clone();
+      for (let j = 0, m = 4 + Math.floor(R() * 3); j < m; j++) {
+        const s2 = r * (0.6 + R() * 0.5);
+        v.copy(c).addScaledVector(right, (R() - 0.5) * r * 2.2).addScaledVector(up, (R() - 0.5) * r * 1.1).addScaledVector(look, (R() - 0.5) * r * 0.8);
+        mesh.setMatrixAt(n++, m4.compose(v, q, sc.set(s2 * 1.15, s2, s2)));
+      }
+    }
+    mesh.count = n;
+    mesh.frustumCulled = false;
+    mesh.renderOrder = 10; // 雲在最上面（透明、不寫深度）
+    scene.add(mesh);
+    cloudLayers.push({ mesh, center: at, look, thick: gap * 0.25 });
+  }
+}
+function updateClouds() {
+  for (const L of cloudLayers) {
+    // 鏡頭在這層前面多遠（沿著視線）：遠的時候是一片白，靠近到雲團的厚度內慢慢淡掉
+    const ahead = v3.copy(L.center).sub(camera.position).dot(L.look);
+    L.mesh.material.opacity = Math.max(0, Math.min(1, ahead / L.thick)) * 0.96;
+    L.mesh.visible = ahead > 0;
+  }
+}
+function dropClouds() {
+  for (const L of cloudLayers) { scene.remove(L.mesh); L.mesh.geometry.dispose(); L.mesh.material.dispose(); }
+  cloudLayers.length = 0;
+}
+const v3 = new THREE.Vector3();
 
 // 開發用：網址加 ?debug 可以從 console 操作鏡頭
 if (new URLSearchParams(location.search).has('debug')) {
-  window.__zoo = { ocean, camera, controls, flyTo, THREE, setSlot, scene, animals, visitors, renderer, labels, world, ui };
+  window.__zoo = { ocean, camera, controls, flyTo, THREE, setSlot, scene, animals, visitors, renderer, labels, world, ui,
+    introAt: (k) => { if (intro) { intro.k = k; intro.go = false; } return !!intro; }, // 進場停在某個進度（檢查雲層用）
+    introGo: () => { if (intro) intro.go = true; } };
 }
 
 const clock = new THREE.Clock();
@@ -364,14 +426,24 @@ function frame() {
   const t = clock.elapsedTime;
   if (intro) {
     if (intro.go) intro.k = Math.min(1, intro.k + Math.min(raw, 1 / 30) / intro.dur); // 偶爾一幀比較久時寧可慢一點，也不要跳一格
-    const u = 1 - ease(intro.k);
-    // 轉的方向和之後 OrbitControls 的自動旋轉一樣（方位角遞減）；加一段等速的量，結尾的轉速剛好接上自動旋轉，不會停一下再轉
-    const spin = INTRO_TURN * u + AUTO_SPIN * intro.dur * (1 - intro.k);
-    spinV.copy(intro.from).applyAxisAngle(THREE.Object3D.DEFAULT_UP, spin).multiplyScalar(1 + u * 0.55);
-    spinV.y = intro.from.y * (1 + u * 0.15);
-    camera.position.copy(intro.target).add(spinV);
+    introPos(intro.k, camera.position);
     controls.target.copy(intro.target);
-    if (intro.k >= 1) { intro = null; controls.autoRotate = true; } // 進場轉進全景後接著慢慢繞
+    // 高空時霧也跟著推遠，不然整片群島都被霧蓋住
+    const extra = camera.position.distanceTo(intro.target) - fromSph.radius;
+    scene.fog.near = 520 + extra; scene.fog.far = 1500 + extra;
+    if (intro.k >= 1) {
+      intro = null;
+      controls.autoRotate = true; // 降到全景後接著慢慢繞
+      // OrbitControls 的阻尼會讓自動旋轉從 0 慢慢加速（看起來像停一下再轉）：直接把累積的旋轉量填成穩定時的值
+      const f = controls.dampingFactor, a = AUTO_SPIN / 60;
+      if (controls._sphericalDelta) controls._sphericalDelta.theta = (-a * (1 - f)) / f;
+    }
+  }
+  // 進場從高空下來，不受拉遠的上限限制；結束後上限至少要放得下全景（直式或偏窄的視窗全景比 820 遠，原本會一下子被拉近）
+  controls.maxDistance = intro ? Infinity : Math.max(820, fromSph.radius * 1.02);
+  if (cloudLayers.length) {
+    if (intro) updateClouds();
+    else { dropClouds(); scene.fog.near = 520; scene.fog.far = 1500; } // 進場結束（或被操作打斷）就拿掉
   }
   if (flight) {
     // 鏡頭用實際經過時間，掉幀時也能準時到位
@@ -400,8 +472,10 @@ function frame() {
   ocean.setSky(scene.background, ui.slot === 'night', sunDir.copy(sun.position).sub(sun.target.position).normalize());
   // 拉遠看全園時只留園區名稱；建築名稱、設施圖示、動物名牌拉近才出現（前後留一段緩衝，不會在門檻上閃爍）
   const dist = camera.position.distanceTo(controls.target), far = 220 * aspectK();
-  if (dist > far * 1.08) { labels.domElement.classList.add('far'); visitors.setFar(true); }
-  else if (dist < far) { labels.domElement.classList.remove('far'); visitors.setFar(false); }
+  if (dist > far * 1.08) labels.domElement.classList.add('far');
+  else if (dist < far) labels.domElement.classList.remove('far');
+  // 遊客（含滑板、滑板車、直排輪）在園區鏡頭也要看得到：門檻比名牌遠 1.5 倍（手機的園區鏡頭比較遠），只有全景才藏
+  if (dist > far * 1.6) visitors.setFar(true); else if (dist < far * 1.5) visitors.setFar(false);
   // 效能：拉遠看全園時動物很小，陰影每 4 幀重算一次就夠；拉近才每幀更新
   frameNo++;
   // 進場轉圈時不重算陰影（每 4 幀算一次會讓那一幀特別久，轉起來一頓一頓的）

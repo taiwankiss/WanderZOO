@@ -125,7 +125,7 @@ function rider(R) {
 
 // 一組遊客：一家人推嬰兒車、大人牽小孩、兩個小朋友、情侶或單人；也有人溜滑板、騎滑板車、穿直排輪
 function party(R) {
-  if (R() < 0.16) return rider(R);
+  if (R() < 0.22) return rider(R);
   const root = new THREE.Group();
   const members = [];
   const add = (p, x, z) => { p.g.position.set(x, 0, z); root.add(p.g); members.push(p); return p; };

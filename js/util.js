@@ -119,3 +119,67 @@ export function bakeRig(root, skip) {
     mergeInto(g, items);
   }
 }
+
+// 效能：一整隻會動的動物合併成一個 SkinnedMesh。每個關節群組（髖、膝、頭、尾巴…）當成一根骨頭，
+// 零件的頂點全部綁在它所在的關節上（權重 1，不會彎曲變形），顏色寫進頂點色。
+// 原本一隻動物要畫幾十次（每個關節 × 每種顏色），現在只要一次（材質種類不同時才多幾次）。
+// self(m)：自己會縮放的零件（呼吸的身體）就拿零件本身當骨頭；exclude(o)：不合併的子樹（會切換顯示的東西）
+export function skinRig(root, { self, exclude } = {}) {
+  root.updateMatrixWorld(true);
+  const inv = new THREE.Matrix4().copy(root.matrixWorld).invert(), local = new THREE.Matrix4();
+  const bones = [], boneIdx = new Map();
+  const boneOf = (o) => { if (!boneIdx.has(o)) { boneIdx.set(o, bones.length); bones.push(o); } return boneIdx.get(o); };
+  const hidden = (o) => { for (let p = o; p && p !== root; p = p.parent) if (!p.visible || p.userData.dynamic || exclude?.(p)) return true; return false; };
+  const kinds = new Map();
+  root.traverse((o) => {
+    if (!mergeable(o) || o.material.transparent || hidden(o)) return;
+    const m = o.material, k = `${m.type}|${m.roughness}|${m.metalness}|${m.flatShading}|${m.emissive?.getHex()}|${m.emissiveIntensity}|${o.castShadow}`;
+    if (!kinds.has(k)) kinds.set(k, []);
+    kinds.get(k).push(o);
+  });
+  const out = [];
+  for (const list of kinds.values()) {
+    const geos = list.map((o) => {
+      const g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone();
+      for (const n of Object.keys(g.attributes)) if (n !== 'position' && n !== 'normal') g.deleteAttribute(n);
+      g.applyMatrix4(local.multiplyMatrices(inv, o.matrixWorld));
+      const n = g.attributes.position.count, c = o.material.color, b = boneOf(self?.(o) ? o : o.parent);
+      const col = new Float32Array(n * 3), si = new Uint16Array(n * 4), sw = new Float32Array(n * 4);
+      for (let i = 0; i < n; i++) { col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; si[i * 4] = b; sw[i * 4] = 1; }
+      g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4));
+      g.setAttribute('skinWeight', new THREE.BufferAttribute(sw, 4));
+      return g;
+    });
+    const m0 = list[0].material;
+    const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: m0.roughness, metalness: m0.metalness, flatShading: m0.flatShading, emissive: m0.emissive, emissiveIntensity: m0.emissiveIntensity });
+    // 晚上動物一起亮起來：自發光用各零件自己的顏色（原本每種顏色一份材質，emissive 設成同色）
+    const glow = { value: 0 };
+    material.userData.glow = glow;
+    material.onBeforeCompile = (sh) => {
+      sh.uniforms.uGlow = glow;
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uGlow;')
+        .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += vColor.rgb * uGlow;');
+    };
+    material.customProgramCacheKey = () => 'skin-glow';
+    const mesh = new THREE.SkinnedMesh(mergeGeometries(geos), material);
+    mesh.castShadow = list[0].castShadow;
+    mesh.receiveShadow = list[0].receiveShadow;
+    out.push(mesh);
+  }
+  for (const list of kinds.values()) for (const o of list) {
+    if (self?.(o)) o.visible = false; // 當骨頭用的零件留在原處（它的縮放會帶動頂點），只是不畫
+    else o.parent.remove(o);
+  }
+  root.updateMatrixWorld(true);
+  const skeleton = new THREE.Skeleton(bones, bones.map((b) => new THREE.Matrix4().copy(b.matrixWorld).invert()));
+  for (const mesh of out) {
+    root.add(mesh);
+    mesh.updateMatrixWorld(true);
+    mesh.bind(skeleton, mesh.matrixWorld);
+    // 包圍球用綁定時的姿勢算，動作（趴下、抬頭）可能超出一點：放大一些，免得被視錐裁掉
+    mesh.computeBoundingSphere();
+    mesh.boundingSphere.radius *= 1.5;
+  }
+  return out;
+}

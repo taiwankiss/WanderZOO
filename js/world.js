@@ -262,7 +262,12 @@ function setupIslands(data) {
       PEAKS.push({ x, z, r, h, snow, flat });
     }
   }
-  if (ISL.tall) for (const I of ISL.islands) if (I.zone?.id === 'africa' && !I.flora) I.hill = { x: I.cx, z: I.cz, r: I.rad * 0.5, h: 4.5 };
+  // 非洲島中央的小山丘：只隆起在展場之間的空地上（半徑量到最近展場外圈再留 2 公尺），不蓋到展場；山小一點高度也跟著降
+  if (ISL.tall) for (const I of ISL.islands) if (I.zone?.id === 'africa' && !I.flora) {
+    const room = Math.min(...data.animals.map(({ enclosure: e }) => Math.hypot(e.x - I.cx, e.z - I.cz) - Math.max(e.rx, e.rz) * 1.25 - 2));
+    const r = Math.min(I.rad * 0.5, room);
+    if (r > 6) I.hill = { x: I.cx, z: I.cz, r, h: Math.min(4.5, r * 0.22) };
+  }
   if (ISL.float || ISL.tall) for (const b of ISL.bridges) {
     // 橋在水面（空中）的那一段：從 a 走出島岸的位置 k0 到走上另一座島的位置 k1
     let k0 = 0, k1 = 1;
@@ -1057,13 +1062,11 @@ const PROPS = {
     g.rotation.y = p.ry || 0;
     return g;
   },
-  // 冰山：一座高低錯落的方塊冰山（極地動物區的造景）
+  // 極地動物區的造景：一座小冰河（岩山、冰舌、崩裂的冰塔，見 glacier），冰舌朝島中心
   iceberg: (p, R) => {
-    const s = p.s || 1, g = new THREE.Group();
-    for (const [x, y, z, w, h, d] of [[0, 2.2, 0, 3.4, 4.4, 3.0], [1.6, 1.4, 0.8, 2.4, 2.8, 2.2], [-1.5, 1.1, -0.6, 2.2, 2.2, 2.4], [0.4, 4.6, -0.2, 1.6, 1.6, 1.4], [-0.4, 0.5, 1.6, 2.6, 1.0, 1.4]]) {
-      g.add(mesh(GEO.box, null, { material: softMat(ICE[Math.floor(R() * 4)]), x: x * s, y: y * s, z: z * s, sx: w * s, sy: h * s, sz: d * s, ry: (R() - 0.5) * 0.3 }));
-    }
-    g.add(mesh(GEO.box, null, { material: softMat(ICE[0]), y: 4.6 * s + 0.85 * s, x: 0.4 * s, sx: 1.7 * s, sy: 0.12, sz: 1.5 * s }));
+    const g = glacier(R), I = 'x' in p && ISL ? islandAt(p.x, p.z) : null;
+    g.scale.setScalar((p.s || 1) * 0.47);
+    g.rotation.y = I ? Math.atan2(I.cx - p.x, I.cz - p.z) : p.ry || 0;
     return g;
   },
   // 入口廣場中間的噴水池
@@ -1213,6 +1216,8 @@ const TALL_ZONE = {
   desert: { top: '#ecd49a', side: '#e2b97c' },
   polar: { top: '#f4fafd', side: '#bfe2ef' },
 };
+// 第三版各園區展場地面的顏色（沒有列出的照展場主題 THEMES）
+const TALL_ENCL = { africa: '#dc9c6c' };
 function tallColors(I) {
   const tz = !I.flora && TALL_ZONE[I.zone?.id];
   if (tz) return { top: new THREE.Color(tz.top), side: new THREE.Color(tz.side) };
@@ -2279,6 +2284,70 @@ Object.assign(TOWN, {
     return { g, r: r + 0.6 };
   },
 });
+function glacier(R) {
+  // 冰河：後面一小座參差的岩山（山頂積雪），一條冰舌從山谷裡彎彎地流下來、越往下越寬、表面微微隆起，
+  // 橫向幾道藍色裂縫；末端是一整片崩裂的藍色冰塔（serac），腳下一小灘融水和幾塊碎冰。冰舌朝 +z（島中心）
+  const g = new THREE.Group();
+  const ice = new THREE.MeshStandardMaterial({ color: '#f2fafd', roughness: 0.35, flatShading: true, emissive: '#d6eef7', emissiveIntensity: 0.3 });
+  const blue = new THREE.MeshStandardMaterial({ color: '#7fc4e2', roughness: 0.2, flatShading: true, emissive: '#5fb0d6', emissiveIntensity: 0.25 });
+  const deep = new THREE.MeshStandardMaterial({ color: '#4d9cc4', roughness: 0.2, flatShading: true, emissive: '#3a8ab8', emissiveIntensity: 0.2 });
+  // 參差的山峰：五角錐頂點亂數錯開；山腰灰藍色岩石、上半截罩一頂雪帽
+  const peak = (x, z, r, h, rot) => {
+    const geo = new THREE.ConeGeometry(r, h, 5, 2).toNonIndexed(), pos = geo.attributes.position;
+    const jit = new Map();
+    for (let i = 0; i < pos.count; i++) {
+      const k = `${pos.getX(i).toFixed(3)},${pos.getY(i).toFixed(3)},${pos.getZ(i).toFixed(3)}`;
+      if (!jit.has(k)) jit.set(k, [(R() - 0.5) * r * 0.35, (R() - 0.5) * h * 0.08, (R() - 0.5) * r * 0.35]);
+      const [dx, dy, dz] = jit.get(k);
+      if (pos.getY(i) > -h / 2 + 0.01) pos.setXYZ(i, pos.getX(i) + dx, pos.getY(i) + dy, pos.getZ(i) + dz);
+    }
+    geo.computeVertexNormals();
+    g.add(mesh(geo, '#b3c5d2', { x, y: h / 2, z, ry: rot }));
+    g.add(mesh(GEO.cone, null, { material: ice, x, y: h * 0.78, z, sx: r * 0.52, sy: h * 0.46, sz: r * 0.52, ry: rot }));
+  };
+  peak(-0.6, -3.8, 3, 7.5, R());
+  peak(-3, -2.8, 2.2, 5.2, R());
+  peak(2.4, -3.2, 2.4, 5.8, R());
+  // 冰舌：沿一條往前、往下的曲線取 12 段，每段一個隆起的截面（中間高、兩邊低），兩側一路接到地面
+  const path = new THREE.CatmullRomCurve3([new THREE.Vector3(-0.4, 3.6, -2.6), new THREE.Vector3(0.4, 2.2, 0), new THREE.Vector3(-0.3, 1.2, 2.6), new THREE.Vector3(0.5, 0.9, 5)]);
+  const N = 12, P = [], idx = [];
+  for (let i = 0; i <= N; i++) {
+    const t = i / N, c = path.getPointAt(t), d = path.getTangentAt(t), nx = -d.z, nz = d.x, l = Math.hypot(nx, nz) || 1;
+    const w = (1.7 + t * 1.5) * (1 + (R() - 0.5) * 0.12), crown = 0.35 + t * 0.15;
+    for (const [u, dy] of [[-1, -crown], [-0.45, 0], [0.45, 0], [1, -crown]]) P.push(c.x + (nx / l) * w * u, c.y + dy, c.z + (nz / l) * w * u);
+    P.push(c.x - (nx / l) * w, 0, c.z - (nz / l) * w, c.x + (nx / l) * w, 0, c.z + (nz / l) * w); // 兩側落地的點
+  }
+  const S = 6;
+  for (let i = 0; i < N; i++) {
+    const a = i * S, b = a + S;
+    for (let j = 0; j < 3; j++) idx.push(a + j, b + j, a + j + 1, a + j + 1, b + j, b + j + 1); // 頂面
+    idx.push(a + 4, b + 4, a, a, b + 4, b); // 左側
+    idx.push(a + 3, b + 3, a + 5, a + 5, b + 3, b + 5); // 右側
+  }
+  const tg = new THREE.BufferGeometry();
+  tg.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+  tg.setIndex(idx);
+  const tongue = new THREE.Mesh(tg.toNonIndexed(), ice);
+  tongue.geometry.computeVertexNormals();
+  tongue.castShadow = tongue.receiveShadow = true;
+  tongue.material.side = THREE.DoubleSide;
+  g.add(tongue);
+  // 橫向裂縫：藍色細條，順著冰舌的坡度
+  for (const t of [0.22, 0.36, 0.5, 0.62, 0.74]) {
+    const c = path.getPointAt(t), d = path.getTangentAt(t), w = 1.7 + t * 1.5;
+    g.add(mesh(GEO.box, null, { material: blue, x: c.x + (R() - 0.5) * 0.4, y: c.y + 0.02, z: c.z, sx: w * (0.9 + R() * 0.5), sy: 0.08, sz: 0.22, ry: Math.atan2(d.x, d.z) + (R() - 0.5) * 0.25, rx: -Math.atan2(d.y, Math.hypot(d.x, d.z)), shadow: false }));
+  }
+  // 末端崩裂的冰塔：一排高低不一、歪斜的冰塊，藍白相間
+  const end = path.getPointAt(1), w1 = 3.2;
+  for (let k = 0; k < 7; k++) {
+    const u = (k / 6 - 0.5) * 2 * w1 * 0.9, h = 1 + R() * 1.1;
+    g.add(mesh(GEO.box, null, { material: [ice, blue, deep][k % 3 === 1 ? 1 : R() < 0.25 ? 2 : 0], x: end.x + u, y: h / 2, z: end.z + 0.3 + R() * 0.5, sx: 0.8 + R() * 0.5, sy: h, sz: 0.7 + R() * 0.4, ry: (R() - 0.5) * 0.6, rz: (R() - 0.5) * 0.2 }));
+  }
+  // 融水和碎冰
+  g.add(mesh(GEO.disc, null, { material: blue, x: end.x, y: 0.05, z: end.z + 2, sx: 2.6, sy: 1.2, rx: -Math.PI / 2, shadow: false }));
+  for (let k = 0; k < 5; k++) g.add(mesh(GEO.ico, null, { material: k % 2 ? blue : ice, x: end.x + (R() - 0.5) * 4, y: 0.15, z: end.z + 1.4 + R() * 1.4, sx: 0.3 + R() * 0.25, sy: 0.22, sz: 0.3 + R() * 0.25, ry: R() * 3 }));
+  return g;
+}
 // 溫帶區的峽谷、楓樹、高大的針葉樹；極地的冰河
 Object.assign(TOWN, {
   canyon: (R) => {
@@ -2309,17 +2378,7 @@ Object.assign(TOWN, {
     for (let i = 0; i < 4; i++) g.add(mesh(GEO.cone, c, { y: (3.4 + i * 2) * s, sx: (2.6 - i * 0.5) * s, sy: 3 * s, sz: (2.6 - i * 0.5) * s }));
     return { g, r: 1.6 * s };
   },
-  glacier: (R) => {
-    // 冰河：一座一層層的冰山，往前流出一條斜斜的冰舌，表面幾道藍色裂縫
-    const g = new THREE.Group(), ice = new THREE.MeshStandardMaterial({ color: '#eef8fc', roughness: 0.2, flatShading: true, emissive: '#cfeaf5', emissiveIntensity: 0.35 });
-    const blue = new THREE.MeshStandardMaterial({ color: '#8fcbe4', roughness: 0.15, flatShading: true, emissive: '#6fb8d8', emissiveIntensity: 0.3 });
-    let y = 0, w = 9;
-    for (let i = 0; i < 4; i++) { const h = 1.6 + R() * 0.8; g.add(mesh(GEO.box, null, { material: i % 2 ? blue : ice, x: -i * 0.6, y: y + h / 2, z: -i * 0.8, sx: w, sy: h, sz: w * 0.8, ry: (R() - 0.5) * 0.2 })); y += h; w -= 2; }
-    g.add(mesh(GEO.ico, null, { material: ice, x: -2, y: y + 0.8, z: -2.4, sx: 2, sy: 1.6, sz: 2 }));
-    g.add(mesh(GEO.box, null, { material: ice, y: 1.1, z: 5.2, sx: 4.2, sy: 0.9, sz: 7, rx: 0.22 })); // 冰舌
-    for (let k = 0; k < 3; k++) g.add(mesh(GEO.box, null, { material: blue, x: (k - 1) * 1.1, y: 1.6 - k * 0.15, z: 4 + k * 1.6, sx: 2.6, sy: 0.1, sz: 0.25, rx: 0.22, shadow: false }));
-    return { g, r: 6.5 };
-  },
+  glacier: (R) => ({ g: glacier(R), r: 6.5 }),
 });
 // 第三版：這幾個園區的島不放一般的小鎮建築，改放各自的地標（種類, 數量, 離岸至少幾公尺, 放大倍數）
 const ZONE_TOWN = {
@@ -2563,9 +2622,11 @@ export function buildWorld(scene, data, { onPick, onZone, onHover }) {
     blockers.push({ x: e.x, z: e.z, rx: e.rx * 1.22, rz: e.rz * 1.22 });
 
     // 外圈一層半透明的過渡色，讓展場地面和草地自然接起來
-    const topMat = new THREE.MeshStandardMaterial({ color: theme.top, roughness: 1, flatShading: true, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
+    // 第三版：非洲島整座是紅土，展場地面原本的草原黃綠色看起來偏綠，改成和島同色系、淺一階的紅土
+    const floorC = (ISL?.tall && TALL_ENCL[a.zone]) || theme.top;
+    const topMat = new THREE.MeshStandardMaterial({ color: floorC, roughness: 1, flatShading: true, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
     // 第三版：外圈不往草綠色靠（土色展場會多一圈綠線），改成中央色塊的顏色再深一點點
-    const fade = ISL?.tall ? new THREE.Color(theme.top).offsetHSL(0, 0.02, -0.06) : new THREE.Color(theme.top).lerp(new THREE.Color(COLOR.grass), 0.55);
+    const fade = ISL?.tall ? new THREE.Color(floorC).offsetHSL(0, 0.02, -0.06) : new THREE.Color(theme.top).lerp(new THREE.Color(COLOR.grass), 0.55);
     const fadeMat = new THREE.MeshStandardMaterial({ color: fade, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
     g.add(patch(outline(0.6, 1.12), fadeMat, 0.02));
     g.add(patch(outline(0.6), topMat, 0.03));

@@ -658,16 +658,16 @@ function planViaducts(data) {
   }
   const cellOf = (x, z) => [Math.round((x - x0) / VIA_CELL), Math.round((z - z0) / VIA_CELL)];
   // 車站附近的岸邊：岸上的點兼顧「離車站近」和「朝目的地」，再往海裡推到可以走的格子
+  // 島長大後水道變窄，最想要的那一點往外可能走不到開闊水域：依分數由好到差逐一試岸上的點
   const shore = (S, I, toward) => {
-    let best = null, bd = Infinity;
-    for (const q of I.poly) {
-      const d = Math.hypot(q[0] - S.x, q[1] - S.z) + 0.35 * Math.hypot(q[0] - toward[0], q[1] - toward[1]);
-      if (d < bd) { bd = d; best = q; }
-    }
-    const dx = best[0] - I.cx, dz = best[1] - I.cz, l = Math.hypot(dx, dz) || 1;
-    for (let r = 0; r < 40; r += 0.5) {
-      const x = best[0] + (dx / l) * r, z = best[1] + (dz / l) * r, [i, j] = cellOf(x, z);
-      if (free[j * nx + i]) return { land: [best[0] - (dx / l) * 1.5, best[1] - (dz / l) * 1.5], sea: [x0 + i * VIA_CELL, z0 + j * VIA_CELL], cell: [i, j] };
+    const score = (q) => Math.hypot(q[0] - S.x, q[1] - S.z) + 0.35 * Math.hypot(q[0] - toward[0], q[1] - toward[1]);
+    for (const best of I.poly.slice().sort((p, q) => score(p) - score(q))) {
+      const dx = best[0] - I.cx, dz = best[1] - I.cz, l = Math.hypot(dx, dz) || 1;
+      for (let r = 0; r < 40; r += 0.5) {
+        const x = best[0] + (dx / l) * r, z = best[1] + (dz / l) * r, [i, j] = cellOf(x, z);
+        if (isleOf(x, z) && isleOf(x, z) !== I) break; // 撞到別的島：這個方向不行
+        if (free[j * nx + i]) return { land: [best[0] - (dx / l) * 1.5, best[1] - (dz / l) * 1.5], sea: [x0 + i * VIA_CELL, z0 + j * VIA_CELL], cell: [i, j] };
+      }
     }
     return null;
   };

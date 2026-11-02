@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { rng, mat, lerp, approach, angleDiff, bakeRig } from './util.js';
+import { rng, mat, lerp, approach, angleDiff, bakeRig, skinRig } from './util.js';
 import { FLOOR, groundY } from './world.js';
 
 // 參數化的四足動物：每個物種只是一組比例與顏色
@@ -818,6 +818,7 @@ function pose(a, st, t) {
   if (a.ball) {
     const curled = st.restK > 0.6;
     a.rig.visible = !curled;
+    for (const m of a.skins || []) m.visible = !curled; // 合併後身體在 SkinnedMesh 裡，不在 rig 底下
     a.ball.visible = curled;
     a.ball.rotation.y = st.heading;
   }
@@ -916,7 +917,9 @@ export function spawnAnimals(scene, data) {
         a.root.updateMatrixWorld(true);
         tops.set(info.id, box.setFromObject(a.root).max.y);
       }
-      bakeRig(a.root, (m) => m === a.torso); // 身體會呼吸縮放，不合併
+      // 整隻合併成一個 SkinnedMesh（身體會呼吸縮放，拿身體本身當骨頭）；穿山甲捲起來的球平常藏著，另外合併
+      a.skins = skinRig(a.root, { self: (m) => m === a.torso, exclude: (o) => o === a.ball });
+      if (a.ball) bakeRig(a.ball);
 
       const obstacles = obstaclesOf(e, spec);
       const hab = habitatOf(e);
@@ -1045,8 +1048,9 @@ export function spawnAnimals(scene, data) {
   }
 
   // 晚上所有動物一起亮起來：動物用自己的一份材質（和場景共用的材質分開），晚上加一點同色的自發光
-  const glow = new Map();
+  const glow = new Map(), skinGlow = new Set();
   for (const h of herd) h.a.root.traverse((o) => {
+    if (o.material?.userData.glow) { skinGlow.add(o.material.userData.glow); return; } // 合併後的動物：自發光用頂點色（見 util.js 的 skinRig）
     if (!o.isMesh || Array.isArray(o.material) || o.material.transparent) return;
     if (!glow.has(o.material)) glow.set(o.material, o.material.clone());
     o.material = glow.get(o.material);
@@ -1056,6 +1060,7 @@ export function spawnAnimals(scene, data) {
     herd, // 開發用（?debug）
     setNight(on) {
       for (const m of glow.values()) { m.emissive.copy(m.color); m.emissiveIntensity = on ? 0.55 : 0; }
+      for (const u of skinGlow) u.value = on ? 0.55 : 0;
     },
     // 點到動物：轉頭看鏡頭、跳兩下、搖頭擺尾（睡著的也會醒來一下）
     poke(id, cam) {

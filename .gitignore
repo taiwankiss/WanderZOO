@@ -4,4 +4,5 @@ Reference/
 backup/
 # 設計參考圖（網站沒用到）
 images/*.png
+!images/favicon.png
 images/map.jpg

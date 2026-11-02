@@ -263,6 +263,16 @@ function setupIslands(data) {
     }
   }
   // 非洲島中央的小山丘：只隆起在展場之間的空地上（半徑量到最近展場外圈再留 2 公尺），不蓋到展場；山小一點高度也跟著降
+  // 第三版：臺灣動物區對岸（離臺灣島最近的那個岸角）是一片海灘
+  if (ISL.tall) {
+    const T = ISL.islands.find((I) => I.zone?.id === 'taiwan');
+    let best = null;
+    if (T) for (let a = 0; a < 360; a += 3) for (let r = 10; r < 400; r += 2) {
+      const x = T.cx + Math.cos((a * Math.PI) / 180) * r, z = T.cz + Math.sin((a * Math.PI) / 180) * r;
+      if (terrainHeight(x, z) > 0.3) { if (!best || r < best.r) best = { r, x, z }; break; }
+    }
+    if (best) ISL.beach = { x: best.x, z: best.z, r: 70 };
+  }
   if (ISL.tall) for (const I of ISL.islands) if (I.zone?.id === 'africa' && !I.flora) {
     const room = Math.min(...data.animals.map(({ enclosure: e }) => Math.hypot(e.x - I.cx, e.z - I.cz) - Math.max(e.rx, e.rz) * 1.25 - 2));
     const r = Math.min(I.rad * 0.5, room);
@@ -357,7 +367,8 @@ function makeTerrain(zones) {
     if (ISL) {
       // 海底和外圍山丘：水邊一圈沙灘，往上是草坡、深綠的山
       pos.setY(i, h);
-      if (h < 1.2) c.copy(sand); else if (ISL.tall) c.set('#bcd59c').lerp(new THREE.Color('#9cc184'), Math.min(1, (h - 1.2) / 14)); // 第三版：淡綠色的平緩岸地
+      const onBeach = ISL.beach && h < 4.5 && Math.hypot(x - ISL.beach.x, z - ISL.beach.z) < ISL.beach.r * (0.9 + 0.1 * Math.sin(x * 0.2 + z * 0.13));
+      if (h < 1.2 || onBeach) c.copy(sand); else if (ISL.tall) c.set('#bcd59c').lerp(new THREE.Color('#9cc184'), Math.min(1, (h - 1.2) / 14)); // 第三版：淡綠色的平緩岸地
       else c.copy(hill).lerp(high, Math.min(1, (h - 1.2) / 40));
       // 雪只畫在真的夠高的地方（山腳被海切掉的部分不會變白）
       for (const p of PEAKS) if (p.snow && peakShape(p, x, z) > p.h * p.snow && h > p.h * p.snow) c.set(peakShape(p, x, z) > p.h * 0.85 ? '#ffffff' : '#e8f0f4');
@@ -1216,8 +1227,17 @@ const TALL_ZONE = {
   desert: { top: '#ecd49a', side: '#e2b97c' },
   polar: { top: '#f4fafd', side: '#bfe2ef' },
 };
-// 第三版各園區展場地面的顏色（沒有列出的照展場主題 THEMES）
-const TALL_ENCL = { africa: '#dc9c6c' };
+// 第三版展場地面的顏色：所在島的頂面顏色，同一區依序換深淺（亮的島往深、其他往淺）
+const floorCount = new Map();
+function enclosureFloor(e, zone) {
+  const I = islandAt(e.x, e.z);
+  const base = I ? tallColors(I).top : new THREE.Color(COLOR.grass), hsl = {};
+  base.getHSL(hsl);
+  const n = floorCount.get(zone) || 0;
+  floorCount.set(zone, n + 1);
+  const d = hsl.l > 0.8 ? -[0.07, 0.11, 0.09, 0.13][n % 4] : [0.08, 0.13, 0.05, 0.11, 0.16][n % 5];
+  return base.clone().offsetHSL(0, hsl.l > 0.8 ? 0.04 : -0.04, d);
+}
 function tallColors(I) {
   const tz = !I.flora && TALL_ZONE[I.zone?.id];
   if (tz) return { top: new THREE.Color(tz.top), side: new THREE.Color(tz.side) };
@@ -1288,6 +1308,108 @@ function bakeShore() {
   tex.needsUpdate = true;
   setShore(tex, x0, z0, W, H);
 }
+// 臺灣動物區對岸的海灘：沙灘上一排排陽傘和海灘巾、躺著曬太陽和站著聊天的人，海裡有人游泳、套著泳圈漂，
+// 後面是遊客中心、幾間小攤販和救生員瞭望台。位置在 setupIslands 算好（ISL.beach）
+function beach(scene, R, movers) {
+  const B = ISL.beach, g = new THREE.Group();
+  scene.add(g);
+  const C = ['#ef6f6c', '#f2c14e', '#5bc0eb', '#9bc53d', '#ff9f1c', '#c77dff', '#fbf7ee'];
+  const pick = (a) => a[Math.floor(R() * a.length)];
+  const SKIN = ['#f0c9a4', '#d9a77e', '#b9825a'];
+  // 朝海的方向：往海的中心
+  const toSea = (x, z) => Math.atan2(PARK.x - x, PARK.z - z);
+  const spots = (lo, hi, n, gap) => {
+    const out = [];
+    for (let i = 0; i < 4000 && out.length < n; i++) {
+      const a = R() * Math.PI * 2, r = Math.sqrt(R()) * B.r * 0.85, x = B.x + Math.cos(a) * r, z = B.z + Math.sin(a) * r, h = terrainHeight(x, z);
+      if (h < lo || h > hi || out.some((o) => Math.hypot(o.x - x, o.z - z) < gap)) continue;
+      out.push({ x, z, y: Math.max(0, h) });
+    }
+    return out;
+  };
+  const person = (x, y, z, ry, lying) => {
+    const p = new THREE.Group(), shirt = pick(C);
+    if (lying) {
+      p.add(mesh(new THREE.CapsuleGeometry(0.22, 0.9, 2, 6), shirt, { y: 0.22, rz: Math.PI / 2 }));
+      p.add(mesh(GEO.sph, pick(SKIN), { x: 0.75, y: 0.25, sx: 0.2, sy: 0.2, sz: 0.2 }));
+    } else {
+      p.add(mesh(new THREE.CapsuleGeometry(0.2, 0.75, 2, 6), shirt, { y: 0.6 }));
+      p.add(mesh(GEO.sph, pick(SKIN), { y: 1.28, sx: 0.2, sy: 0.2, sz: 0.2 }));
+      p.add(mesh(GEO.sph, pick(['#1f1a17', '#3b2a20', '#6b4a32']), { y: 1.36, sx: 0.21, sy: 0.12, sz: 0.21 }));
+    }
+    p.position.set(x, y, z);
+    p.rotation.y = ry;
+    p.scale.setScalar(1.5);
+    g.add(p);
+    return p;
+  };
+  // 陽傘＋海灘巾＋躺著的人
+  for (const s of spots(0.15, 1.6, 16, 5)) {
+    const ry = toSea(s.x, s.z), c1 = pick(C.slice(0, 6)), c2 = '#fbf7ee';
+    const u = new THREE.Group();
+    u.position.set(s.x, s.y, s.z);
+    u.add(mesh(GEO.cyl, '#fbf7ee', { y: 1.4, sx: 0.06, sy: 2.8, sz: 0.06 }));
+    for (let k = 0; k < 8; k++) u.add(mesh(new THREE.ConeGeometry(1.6, 0.6, 8, 1, false, (k / 8) * Math.PI * 2, Math.PI / 4), k % 2 ? c1 : c2, { y: 2.9 })); // 紅白相間的傘面
+    u.rotation.z = (R() - 0.5) * 0.2;
+    g.add(u);
+    const tx = s.x + Math.sin(ry) * 1.6, tz = s.z + Math.cos(ry) * 1.6;
+    g.add(mesh(GEO.box, pick(C), { x: tx, y: s.y + 0.04, z: tz, sx: 1.1, sy: 0.05, sz: 2.2, ry, shadow: false }));
+    if (R() < 0.75) person(tx, s.y + 0.05, tz, ry + Math.PI / 2, true);
+    if (R() < 0.4) person(s.x - Math.cos(ry) * 1.5, s.y, s.z + Math.sin(ry) * 1.5, ry + (R() - 0.5), false);
+  }
+  // 沙灘上走動、玩球、堆沙堡的人
+  for (const s of spots(0.15, 2.2, 14, 3)) {
+    person(s.x, s.y, s.z, R() * 6.28, false);
+    if (R() < 0.3) g.add(mesh(GEO.sph, pick(C), { x: s.x + 1, y: s.y + 0.3, z: s.z, sx: 0.3, sy: 0.3, sz: 0.3 })); // 海灘球
+    if (R() < 0.2) g.add(mesh(GEO.cone, '#e9cf98', { x: s.x - 1, y: s.y + 0.35, z: s.z + 0.6, sx: 0.6, sy: 0.7, sz: 0.6 })); // 沙堡
+  }
+  // 海裡游泳、套泳圈的人（離岸不遠的淺水），上下輕輕漂
+  const swim = [];
+  for (let i = 0; i < 4000 && swim.length < 18; i++) {
+    const a = R() * Math.PI * 2, r = Math.sqrt(R()) * B.r, x = B.x + Math.cos(a) * r, z = B.z + Math.sin(a) * r, h = terrainHeight(x, z);
+    if (h > -0.6 || h < -3.5 || swim.some((o) => Math.hypot(o.x - x, o.z - z) < 3)) continue;
+    let nearLand = false; // 只在離沙灘 12 公尺內的淺水
+    for (let k = 0; k < 8 && !nearLand; k++) nearLand = terrainHeight(x + Math.cos(k * 0.785) * 12, z + Math.sin(k * 0.785) * 12) > 0.1;
+    if (!nearLand) continue;
+    const p = new THREE.Group();
+    p.add(mesh(GEO.sph, pick(SKIN), { y: 0.35, sx: 0.3, sy: 0.3, sz: 0.3 }));
+    p.add(mesh(GEO.sph, pick(['#1f1a17', '#3b2a20', '#f2c14e']), { y: 0.45, sx: 0.31, sy: 0.17, sz: 0.31 }));
+    if (R() < 0.6) p.add(mesh(new THREE.TorusGeometry(0.55, 0.2, 8, 16), pick(C.slice(0, 6)), { y: 0.05, rx: Math.PI / 2 })); // 泳圈
+    else for (const sd of [-1, 1]) p.add(mesh(GEO.box, pick(SKIN), { x: sd * 0.45, y: 0.05, sx: 0.5, sy: 0.12, sz: 0.14, rz: sd * 0.2 })); // 划水的手
+    p.position.set(x, 0, z);
+    p.rotation.y = R() * 6.28;
+    p.userData.dynamic = true;
+    g.add(p);
+    swim.push({ p, x, z, ph: R() * 6.28 });
+  }
+  movers.push((t) => { for (const s of swim) { s.p.position.y = Math.sin(t * 1.6 + s.ph) * 0.12; s.p.rotation.z = Math.sin(t * 1.1 + s.ph) * 0.08; } });
+  // 救生員瞭望台
+  const lg = spots(0.3, 1.5, 1, 1)[0];
+  if (lg) {
+    const t = new THREE.Group();
+    t.position.set(lg.x, lg.y, lg.z);
+    t.rotation.y = toSea(lg.x, lg.z);
+    for (const [x, z] of [[-0.6, -0.6], [0.6, -0.6], [-0.6, 0.6], [0.6, 0.6]]) t.add(mesh(GEO.box, '#fbf7ee', { x, z, y: 1.3, sx: 0.12, sy: 2.6, sz: 0.12 }));
+    t.add(mesh(GEO.box, '#ef6f6c', { y: 2.7, sx: 1.6, sy: 0.9, sz: 1.6 }));
+    t.add(mesh(GEO.roof, '#fbf7ee', { y: 3.6, sx: 1.4, sy: 0.7, sz: 1.4, ry: Math.PI / 4 }));
+    g.add(t);
+    person(lg.x, lg.y + 3.2, lg.z, toSea(lg.x, lg.z), false).scale.setScalar(1.2);
+  }
+  // 後排：遊客中心（童話風館舍）和幾間小攤販
+  const back = spots(2.2, 6, 5, 12);
+  back.forEach((s, i) => {
+    const o = i === 0 ? new THREE.Group() : TOWN.kiosk(R).g;
+    if (i === 0) {
+      storyHall(o, { w: 14, d: 9, color: '#f6eedb' }, 1, new THREE.MeshStandardMaterial({ color: '#9fb2d6', roughness: 0.35 }));
+      const sign = mesh(GEO.box, '#3a8f8a', { y: 1.2, z: 5.2, sx: 4.4, sy: 0.9, sz: 0.12 });
+      o.add(sign);
+    } else o.scale.setScalar(1.3);
+    o.position.set(s.x, s.y, s.z);
+    o.rotation.y = toSea(s.x, s.z);
+    g.add(o);
+  });
+}
+
 function buildTall(scene, R) {
   // 海面：PlaneGeometry 在 XY 平面，seaGeometry 錯開頂點後再轉平；低多邊形／中間版的三角面起伏見 ocean.js
   const sea = new THREE.Mesh(seaGeometry(1000, 1120, rng(5)).rotateX(-Math.PI / 2).translate(PARK.x, 0, PARK.z),
@@ -1733,6 +1855,7 @@ function buildTall(scene, R) {
   clouds.userData.dynamic = true;
   scene.add(clouds);
   movers.push((t) => { clouds.position.x = Math.sin(t * 0.015) * 14; });
+  if (ISL.beach) beach(scene, R, movers);
   // 星星：晚上才出現，散在高空的半球上
   const sp = [];
   for (let i = 0; i < 700; i++) {
@@ -2125,6 +2248,52 @@ const TOWN = {
     g.add(mesh(GEO.box, '#f3d58a', { y: 3.3, sx: w * 0.5, sy: 0.6, sz: 0.12 }));
     return { g, r: w / 2 + 1 };
   },
+  // 兒童遊戲場：軟墊地面、溜滑梯（爬梯平台＋斜滑道）、盪鞦韆、翹翹板、攀爬圓頂、沙坑、旋轉盤，顏色鮮豔
+  playground: (R) => {
+    const g = new THREE.Group(), C = ['#ef6f6c', '#f2c14e', '#5bc0eb', '#9bc53d', '#ff9f1c', '#c77dff'];
+    const c = () => C[Math.floor(R() * C.length)];
+    g.add(mesh(GEO.cyl, '#e98a6a', { y: 0.06, sx: 5.4, sy: 0.12, sz: 5.4, shadow: false })); // 軟墊
+    g.add(mesh(GEO.cyl, '#f6c48f', { y: 0.07, sx: 4.6, sy: 0.12, sz: 4.6, shadow: false }));
+    // 溜滑梯
+    const sl = new THREE.Group(); sl.position.set(-2, 0, -1.4);
+    for (const [x, z] of [[-0.5, -0.5], [0.5, -0.5], [-0.5, 0.5], [0.5, 0.5]]) sl.add(mesh(GEO.box, '#fbf7ee', { x, z, y: 1, sx: 0.12, sy: 2, sz: 0.12 }));
+    sl.add(mesh(GEO.box, c(), { y: 1.5, sx: 1.2, sy: 0.12, sz: 1.2 }));
+    sl.add(mesh(GEO.roof, c(), { y: 2.45, sx: 0.95, sy: 0.9, sz: 0.95, ry: Math.PI / 4 }));
+    sl.add(mesh(GEO.box, c(), { x: 1.55, y: 0.85, sx: 2.2, sy: 0.08, sz: 0.7, rz: -0.62 }));
+    for (const z of [-0.36, 0.36]) sl.add(mesh(GEO.box, '#fbf7ee', { x: 1.55, y: 1.0, z, sx: 2.2, sy: 0.2, sz: 0.05, rz: -0.62 }));
+    for (let k = 0; k < 4; k++) sl.add(mesh(GEO.box, '#fbf7ee', { x: -0.8, y: 0.3 + k * 0.36, sx: 0.08, sy: 0.06, sz: 0.8 })); // 爬梯
+    g.add(sl);
+    // 盪鞦韆：A 字架、兩個座位
+    const sw = new THREE.Group(); sw.position.set(2, 0, -1.8); sw.rotation.y = 0.3;
+    for (const x of [-1.4, 1.4]) for (const z of [-0.5, 0.5]) sw.add(mesh(GEO.box, '#3a8f8a', { x, y: 1.1, z: z * 0.6, sx: 0.12, sy: 2.3, sz: 0.12, rx: z * 0.45 }));
+    sw.add(mesh(GEO.box, '#3a8f8a', { y: 2.2, sx: 3, sy: 0.12, sz: 0.12 }));
+    for (const x of [-0.6, 0.6]) {
+      for (const dx of [-0.22, 0.22]) sw.add(mesh(GEO.box, '#7a7a7a', { x: x + dx, y: 1.45, sx: 0.03, sy: 1.5, sz: 0.03, shadow: false }));
+      sw.add(mesh(GEO.box, c(), { x, y: 0.68, sx: 0.55, sy: 0.07, sz: 0.3 }));
+    }
+    g.add(sw);
+    // 翹翹板
+    const ss = new THREE.Group(); ss.position.set(2.4, 0, 1.6); ss.rotation.y = -0.5;
+    ss.add(mesh(GEO.prism, '#fbf7ee', { y: 0.25, sx: 0.4, sy: 0.5, sz: 0.4, ry: Math.PI / 2 }));
+    ss.add(mesh(GEO.box, c(), { y: 0.5, sx: 3, sy: 0.08, sz: 0.3, rz: 0.18 }));
+    for (const x of [-1.3, 1.3]) ss.add(mesh(GEO.box, '#fbf7ee', { x, y: 0.5 + x * 0.18 + 0.2, sx: 0.06, sy: 0.3, sz: 0.4 }));
+    g.add(ss);
+    // 攀爬圓頂：幾道彩色的半圓拱交叉
+    const dome = new THREE.Group(); dome.position.set(-1.4, 0, 2.2);
+    for (let k = 0; k < 4; k++) dome.add(mesh(new THREE.TorusGeometry(1.1, 0.06, 5, 16, Math.PI), C[k], { ry: (k / 4) * Math.PI }));
+    dome.add(mesh(new THREE.TorusGeometry(0.95, 0.05, 5, 20), '#fbf7ee', { y: 0.55, rx: Math.PI / 2 }));
+    g.add(dome);
+    // 沙坑和旋轉盤
+    g.add(mesh(GEO.box, '#d9b779', { x: 0.6, y: 0.18, z: 0.2, sx: 1.8, sy: 0.24, sz: 1.8 }));
+    g.add(mesh(GEO.box, '#f2e2b8', { x: 0.6, y: 0.24, z: 0.2, sx: 1.5, sy: 0.2, sz: 1.5, shadow: false }));
+    g.add(mesh(GEO.cone, c(), { x: 0.9, y: 0.45, z: 0.4, sx: 0.25, sy: 0.35, sz: 0.25 })); // 沙堆上的小水桶
+    const mg = new THREE.Group(); mg.position.set(-3.4, 0, 0.9);
+    mg.add(mesh(GEO.cyl, c(), { y: 0.3, sx: 1, sy: 0.12, sz: 1 }));
+    for (let k = 0; k < 4; k++) { const a = (k / 4) * Math.PI * 2; mg.add(mesh(GEO.box, '#fbf7ee', { x: Math.cos(a) * 0.7, z: Math.sin(a) * 0.7, y: 0.7, sx: 0.06, sy: 0.8, sz: 0.06 })); }
+    mg.add(mesh(GEO.cyl, '#fbf7ee', { y: 1.1, sx: 0.75, sy: 0.05, sz: 0.75 }));
+    g.add(mg);
+    return { g, r: 5.6 };
+  },
   gazebo: (R) => {
     const g = new THREE.Group();
     g.add(mesh(GEO.cyl, '#e3d5b2', { y: 0.15, sx: 2.2, sy: 0.3, sz: 2.2 }));
@@ -2412,7 +2581,7 @@ function buildTown(scene, R, blocked, blockers) {
   for (const I of ISL.islands) {
     if (I.flora && I.flora !== 'camp') continue; // 非洲動物島留給動物
     if (I.flora === 'camp') { place(I, 'windmill', 2.5); continue; }
-    if (!I.zone) { place(I, I.id === 'hub' ? 'clock' : 'lighthouse', I.id === 'hub' ? 6 : 2.2); if (I.id === 'hub') for (const k of ['shop', 'kiosk', 'gazebo']) place(I, k, 3); continue; }
+    if (!I.zone) { place(I, I.id === 'hub' ? 'clock' : 'lighthouse', I.id === 'hub' ? 6 : 2.2); if (I.id === 'hub') for (const k of ['playground', 'playground', 'shop', 'kiosk', 'gazebo']) place(I, k, 3); continue; } // 入口島（和兒童區合併）有兩座兒童遊戲場
     const zt = ZONE_TOWN[I.zone.id];
     if (zt) { for (const [kind, num, inset, sc] of zt) for (let k = 0; k < num; k++) place(I, kind, inset, sc); place(I, 'lighthouse', 1.6); continue; }
     const cnt = Math.max(1, Math.min(3, Math.round(I.rad / 28)));
@@ -2622,8 +2791,9 @@ export function buildWorld(scene, data, { onPick, onZone, onHover }) {
     blockers.push({ x: e.x, z: e.z, rx: e.rx * 1.22, rz: e.rz * 1.22 });
 
     // 外圈一層半透明的過渡色，讓展場地面和草地自然接起來
-    // 第三版：非洲島整座是紅土，展場地面原本的草原黃綠色看起來偏綠，改成和島同色系、淺一階的紅土
-    const floorC = (ISL?.tall && TALL_ENCL[a.zone]) || theme.top;
+    // 第三版：展場地面和所在那座島同色系（使用者：同地區同一個顏色，只用深淺區分），同一區的展場輪流淺幾階；
+    // 冰原那種很亮的島改成往深一點
+    const floorC = ISL?.tall ? enclosureFloor(e, a.zone) : theme.top;
     const topMat = new THREE.MeshStandardMaterial({ color: floorC, roughness: 1, flatShading: true, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
     // 第三版：外圈不往草綠色靠（土色展場會多一圈綠線），改成中央色塊的顏色再深一點點
     const fade = ISL?.tall ? new THREE.Color(floorC).offsetHSL(0, 0.02, -0.06) : new THREE.Color(theme.top).lerp(new THREE.Color(COLOR.grass), 0.55);
@@ -2946,7 +3116,8 @@ export function buildWorld(scene, data, { onPick, onZone, onHover }) {
     if (!zn.outline) continue;
     // 島嶼版：種在整座島上（離岸邊 1.2 公尺以內不種），密度只有一半，動物之間不會被植物隔開
     // 第二版的非洲區是很多座小島，每座島依島型（flora）種不同的植物
-    const isles = ISL ? ISL.islands.filter((I) => I.zone === zn) : [];
+    // 兒童區和入口廣場合併成同一座島（hub）：整座島一起種，不再只照兒童區原本的輪廓種（原本左半邊很密、右半邊空的）
+    const isles = ISL ? ISL.islands.filter((I) => I.zone === zn || (ISL.tall && zn.id === 'children' && I.id === 'hub')) : [];
     for (const isle of isles.length ? isles : [null]) {
       const poly = isle ? isle.poly : new THREE.CatmullRomCurve3(zn.outline.map(([x, z]) => new THREE.Vector3(x, 0, z)), true, 'centripetal').getPoints(90).map((v) => [v.x, v.z]);
       const xs = poly.map((q) => q[0]), zs = poly.map((q) => q[1]);

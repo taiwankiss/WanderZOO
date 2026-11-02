@@ -533,3 +533,10 @@ cd "/Users/taiwankiss/Documents/WEI/Ai/Zoo Guide" && python3 -m http.server 8173
 ```
 
 打開 http://localhost:8173 （海上厚台地，唯一的版本）。專案也有 `.claude/launch.json`（埠號 8173），可以用 Claude 的預覽啟動。`?debug` 會把鏡頭和場景掛到 `window.__zoo`。
+
+## 線上版（2026-11-02）
+
+- GitHub repo：https://github.com/taiwankiss/WanderZOO（公開，`main` 分支）
+- 網址（GitHub Pages，從 `main` 根目錄發布）：https://taiwankiss.github.io/WanderZOO/
+- 推上 `main` 後約一分鐘網站自動更新。`.gitignore` 排除 Reference/、backup/、.claude/、設計參考圖。
+- 下一步可做：每隻動物的小方塊合併成一個 mesh，降低每幀約 2,490 次 draw call。

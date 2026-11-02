@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Wander ZOO</title>
+  <meta name="description" content="Wander ZOO：用 3D 小模型逛臺北市立動物園的海上群島。點園區、點展場認識動物，切換時段看誰醒著、誰在睡。（非官方試做版）">
+  <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+  <meta name="theme-color" content="#9fd67f">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,800;1,9..144,500&family=Geist+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/ui.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+      "motion": "https://cdn.jsdelivr.net/npm/motion@12.23.12/+esm"
+    }
+  }
+  </script>
+</head>
+<body class="opening">
+  <main id="app">
+    <section id="stage" aria-label="動物園 3D 地圖">
+      <header class="brand">
+        <h1><em>Wander</em> ZOO</h1>
+        <p>3D Park Tour Map</p>
+      </header>
+
+      <div class="time" id="slots" role="group" aria-label="參觀時段"></div>
+
+      <article id="card" hidden aria-live="polite"></article>
+      <!-- 手機版：上一個／下一個動物的箭頭放在地圖兩側 -->
+      <button type="button" class="map-nav prev" data-step="-1" aria-label="上一個動物"><svg viewBox="0 0 24 24"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg></button>
+      <button type="button" class="map-nav next" data-step="1" aria-label="下一個動物"><svg viewBox="0 0 24 24"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg></button>
+
+      <div id="caption" hidden>
+        <div class="cap-text"><b></b><span></span></div>
+        <button type="button" class="cap-skip">結束導覽</button>
+      </div>
+
+      <!-- 開場：布幕上浮出站名，園區準備好後布幕上下拉開（js/opening.js） -->
+      <div id="opening" aria-hidden="true">
+        <div class="op-curtain top"></div>
+        <div class="op-curtain bottom"></div>
+        <div class="op-title">
+          <p class="op-kicker">Taipei Zoo · Unofficial</p>
+          <h1><em class="op-word">Wander</em> <span class="op-word">ZOO</span><i class="op-dot"></i></h1>
+        </div>
+        <div class="op-title op-below">
+          <p class="op-sub">3D Park Tour Map</p>
+          <p class="op-status">載入園區 <b class="op-pct">0</b>%</p>
+        </div>
+        <i class="op-seam"></i>
+      </div>
+    </section>
+
+    <nav class="rail" id="tools" aria-label="地圖工具">
+      <button type="button" data-action="menu" aria-expanded="false" data-tip="園區選單" aria-label="園區選單">
+        <svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h14"/></svg>
+      </button>
+      <button type="button" data-action="overview" data-tip="全景" aria-label="全景">
+        <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/><circle cx="12" cy="12" r="2.4"/></svg>
+      </button>
+      <button type="button" data-layer="labels" aria-pressed="false" data-tip="名牌" aria-label="名牌">
+        <svg viewBox="0 0 24 24"><path d="M3.5 12.5V5a1.5 1.5 0 0 1 1.5-1.5h7.5L21 12l-8.5 8.5z"/><circle cx="8.5" cy="8.5" r="1.6"/></svg>
+      </button>
+      <button type="button" data-action="tour" data-tip="導覽" aria-label="導覽">
+        <svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg>
+      </button>
+    </nav>
+
+    <aside id="panel" aria-label="園區與動物">
+      <button type="button" class="handle" aria-label="展開或收合清單"><span></span></button>
+      <div class="panel-head">
+        <p class="eyebrow">Wander ZOO · Zones</p>
+        <h2>園區</h2>
+        <p class="sub" id="panel-sub"></p>
+      </div>
+      <div class="scroll">
+        <ol class="zones" id="zone-list"></ol>
+        <section class="facilities" id="legend" aria-label="設施">
+          <div class="lg-head">
+            <h3>設施</h3>
+            <button type="button" class="lg-switch" data-layer="facilities" aria-pressed="true" aria-label="在地圖上顯示設施">
+              <span class="on">顯示</span><span class="off">隱藏</span><i aria-hidden="true"></i>
+            </button>
+          </div>
+          <ul id="legend-list"></ul>
+        </section>
+        <footer class="disclaimer" id="disclaimer"></footer>
+      </div>
+    </aside>
+  </main>
+  <script type="module" src="js/opening.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

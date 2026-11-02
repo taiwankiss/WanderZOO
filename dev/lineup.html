@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>動物造型總覽</title>
+  <!-- 開發用：所有動物排成一格一格，跟 Reference/ 的積木動物圖同一個角度比對 -->
+  <style>
+    html, body { margin: 0; height: 100%; background: #f7f6f2; font-family: system-ui, sans-serif; }
+    canvas { display: block; }
+    .lbl { position: absolute; transform: translate(-50%, 0); font-size: 13px; color: #333; font-weight: 600; white-space: nowrap; }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+<script type="module">
+import * as THREE from 'three';
+import { SPECIES, buildAnimal, pose } from '../js/animals.js';
+import { rng } from '../js/util.js';
+
+const only = new URLSearchParams(location.search).get('only');
+const ids = Object.keys(SPECIES).filter((k) => !only || only.split(',').includes(k));
+const cols = Math.min(ids.length, Number(new URLSearchParams(location.search).get('cols')) || 7);
+const rows = Math.ceil(ids.length / cols);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#f7f6f2');
+scene.add(new THREE.HemisphereLight('#ffffff', '#c9c3b5', 1.6));
+const sun = new THREE.DirectionalLight('#ffffff', 2.2);
+sun.position.set(-4, 10, 6);
+scene.add(sun);
+
+const R = rng(3), items = [];
+ids.forEach((id) => {
+  const a = buildAnimal(SPECIES[id], R);
+  // 擺成遊戲裡站著（或坐著）休息的姿勢
+  const st = { speed: 0, react: 0, restK: 0, sitK: a.spec.sitter ? 1 : 0, headDown: 0, heading: 0, phase: 0, pitch: 0, wait: 1, seed: 0 };
+  for (const k of ['airK', 'alertK', 'brachK', 'filterK', 'hangK', 'howlK', 'lieK', 'rollK', 'scratchK', 'sprayK', 'stretchK', 'washK']) st[k] = 0;
+  pose(a, st, 0);
+  a.root.rotation.y = -2.5; // 頭朝左前方，跟參考圖一樣
+  scene.add(a.root);
+  a.root.updateMatrixWorld(true);
+  const g = new THREE.Box3().setFromObject(a.root);
+  items.push({ id, root: a.root, c: g.getCenter(new THREE.Vector3()), r: g.getSize(new THREE.Vector3()).length() * 0.5 });
+});
+// 每隻動物各畫在自己的格子裡，鏡頭角度都一樣
+const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
+const dir = new THREE.Vector3(0.35, 0.85, 1).normalize();
+renderer.setScissorTest(true);
+renderer.autoClear = true;
+function fit() {
+  renderer.setSize(innerWidth, innerHeight);
+  const cw = innerWidth / cols, ch = (innerHeight - 10) / rows;
+  document.querySelectorAll('.lbl').forEach((e) => e.remove());
+  items.forEach((it, i) => {
+    const c = i % cols, r = Math.floor(i / cols);
+    const x = c * cw, y = innerHeight - (r + 1) * ch;
+    items.forEach((o) => { o.root.visible = o === it; });
+    const asp = cw / (ch - 20), half = it.r * 0.85 / Math.min(asp, 1);
+    cam.left = -half * asp; cam.right = half * asp; cam.top = half; cam.bottom = -half;
+    cam.position.copy(it.c).addScaledVector(dir, 20);
+    cam.lookAt(it.c);
+    cam.updateProjectionMatrix();
+    renderer.setViewport(x, y + 20, cw, ch - 20);
+    renderer.setScissor(x, y, cw, ch);
+    renderer.render(scene, cam);
+    const d = document.createElement('div');
+    d.className = 'lbl';
+    d.textContent = it.id;
+    d.style.left = `${x + cw / 2}px`;
+    d.style.top = `${innerHeight - y - 22}px`;
+    document.body.appendChild(d);
+  });
+}
+addEventListener('resize', fit);
+fit();
+window.__lineup = { scene, cam, renderer, fit, items };
+</script>
+</body>
+</html>

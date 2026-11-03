@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { rng, mat, bakeRig } from './util.js';
+import { rng, mat, skinRig } from './util.js';
 import { groundY } from './world.js';
 
 const SHIRTS = ['#e07a4c', '#4f7cac', '#f2c14e', '#6aa36f', '#d65a7a', '#7a6bb0', '#f3f0e8', '#3a8f8a', '#ef9f6b'];
@@ -181,7 +181,7 @@ export function spawnVisitors(scene, paths) {
     const len = path.curve.getLength();
     for (let i = 0; i < path.walkers; i++) {
       const p = party(R);
-      bakeRig(p.root);
+      skinRig(p.root); // 整組遊客合併成一個 SkinnedMesh（每個關節一根骨頭），一組只畫一次
       scene.add(p.root);
       const room = Math.max(0, path.width / 2 - p.width - 0.1);
       walkers.push({

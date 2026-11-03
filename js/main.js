@@ -10,14 +10,35 @@ import { ease, pad, bakeStatic } from './util.js';
 import { startOcean } from './ocean.js';
 import { reveal, progress } from './opening.js';
 
+// 文字的簡單雜湊（FNV-1a），只拿來比對快取是不是同一份來源
+function hashText(t) { let h = 0x811c9dc5; for (let i = 0; i < t.length; i++) h = Math.imul(h ^ t.charCodeAt(i), 0x01000193); return (h >>> 0).toString(36); }
 // 載入進度（布幕中間那條線）：每完成一段就往前推一點，見 opening.js 的 progress
 progress(6, 12);
-const data = await fetch('data/zoo.json').then((r) => r.json());
-// 動物照片（Wikimedia Commons，授權資訊在 photos.json）；抓不到就不顯示照片
-data.photos = await fetch('data/photos.json').then((r) => r.json()).catch(() => ({}));
-// 海上厚台地：每個園區是一座立在海上的厚島，島和島之間用橋、樓梯、海上大橋相連（只剩這一個版本）
-await progress(12, 24);
-makeIslands(data, { v3: true });
+// 幾個檔案一起抓：園區資料、動物照片（Wikimedia Commons，授權資訊在 photos.json；抓不到就不顯示）、
+// 島嶼排版的快取，和 islands.js 的原始碼（用來確認快取還是不是最新的）
+const [zooText, photos, cache, islandsSrc] = await Promise.all([
+  fetch('data/zoo.json').then((r) => r.text()),
+  fetch('data/photos.json').then((r) => r.json()).catch(() => ({})),
+  fetch('data/islands-cache.json').then((r) => r.json()).catch(() => null),
+  fetch('js/islands.js').then((r) => r.text()).catch(() => ''),
+]);
+// 海上厚台地：每個園區是一座立在海上的厚島，島和島之間用橋、樓梯、海上大橋相連（只剩這一個版本）。
+// 排島（makeIslands）要算一秒多，結果是固定的：預先存在 data/islands-cache.json，園區資料和 islands.js 都沒改過就直接用；
+// 改過（key 對不上）就當場算。?debug 可以用 __zoo.islandsCache() 存一份新的快取
+const cacheKey = `${hashText(zooText)}-${hashText(islandsSrc)}`;
+let data;
+if (cache?.key === cacheKey) {
+  data = cache.data;
+  for (const I of data.islands) if (I.zone) I.zone = data.zones.find((z) => z.id === I.zone.id); // JSON 拆開了物件參照，接回同一個園區物件
+} else {
+  data = JSON.parse(zooText);
+  await progress(12, 24);
+  makeIslands(data, { v3: true });
+}
+// 剛排好、還沒被其他程式加東西的那一份（只有 ?debug 才留，給 __zoo.islandsCache 存檔用）
+const snapshot = new URLSearchParams(location.search).has('debug') && cache?.key !== cacheKey ? JSON.stringify({ key: cacheKey, data }) : null;
+const islandsCache = () => snapshot;
+data.photos = photos;
 await progress(24, 58);
 const stage = document.getElementById('stage');
 
@@ -52,7 +73,7 @@ const hemi = new THREE.HemisphereLight('#dcecff', '#c2b07e', 1.05);
 const sun = new THREE.DirectionalLight('#ffffff', 2.6);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
-Object.assign(sun.shadow.camera, { left: -118, right: 118, top: 118, bottom: -118, near: 1, far: 400 });
+Object.assign(sun.shadow.camera, { left: -118, right: 118, top: 118, bottom: -118, near: 1, far: 800 });
 sun.shadow.bias = -0.0004;
 sun.shadow.normalBias = 0.03;
 sun.target.position.set(2, 0, -4);
@@ -72,17 +93,33 @@ const skyTarget = { sky: new THREE.Color(), sun: new THREE.Color(), hs: new THRE
 function setSky(id, instant) {
   const s = SKY[id];
   skyTarget.sky.set(s.sky); skyTarget.sun.set(s.sun); skyTarget.hs.set(s.hs); skyTarget.hg.set(s.hg);
-  skyTarget.pos.set(...s.pos).add(sun.target.position);
+  skyTarget.pos.set(...s.pos); // 太陽相對於陰影中心的方向（實際位置每幀跟著鏡頭的中心走，見 followShadow）
   skyTarget.si = s.si; skyTarget.hi = s.hi;
   if (instant) stepSky(1);
 }
+const sunOff = new THREE.Vector3(-62, 40, 44);
+// 陰影跟著鏡頭：陰影的範圍以鏡頭看的中心為準（每 8 公尺跳一格，免得陰影邊緣一直抖），拉得越遠範圍越大；
+// 原本固定在入口附近 ±118 公尺，外圍的島都沒有影子
+let shadowHalf = 118;
+function followShadow(dist) {
+  const c = controls.target, g = 8;
+  sun.target.position.set(Math.round(c.x / g) * g, 0, Math.round(c.z / g) * g);
+  sun.position.copy(sun.target.position).addScaledVector(v3s.copy(sunOff).normalize(), 360);
+  const half = Math.min(480, Math.max(118, Math.round((dist * 0.55) / 20) * 20));
+  if (half !== shadowHalf) {
+    shadowHalf = half;
+    Object.assign(sun.shadow.camera, { left: -half, right: half, top: half, bottom: -half });
+    sun.shadow.camera.updateProjectionMatrix();
+  }
+}
+const v3s = new THREE.Vector3();
 function stepSky(k) {
   scene.background.lerp(skyTarget.sky, k);
   scene.fog.color.copy(scene.background);
   sun.color.lerp(skyTarget.sun, k);
   hemi.color.lerp(skyTarget.hs, k);
   hemi.groundColor.lerp(skyTarget.hg, k);
-  sun.position.lerp(skyTarget.pos, k);
+  sunOff.lerp(skyTarget.pos, k);
   sun.intensity += (skyTarget.si - sun.intensity) * k;
   hemi.intensity += (skyTarget.hi - hemi.intensity) * k;
 }
@@ -413,9 +450,27 @@ const v3 = new THREE.Vector3();
 if (new URLSearchParams(location.search).has('debug')) {
   window.__zoo = { ocean, camera, controls, flyTo, THREE, setSlot, scene, animals, visitors, renderer, labels, world, ui,
     introAt: (k) => { if (intro) { intro.k = k; intro.go = false; } return !!intro; }, // 進場停在某個進度（檢查雲層用）
-    introGo: () => { if (intro) intro.go = true; } };
+    introGo: () => { if (intro) intro.go = true; }, islandsCache };
 }
 
+// 建築名稱互相重疊時（手機最明顯，例如「便當攤販」和「售票亭」），離鏡頭近的（畫面上比較下面的）留著，被壓到的先藏起來
+function declutter() {
+  const els = [...labels.domElement.querySelectorAll('.zone-sm')];
+  const boxes = [];
+  for (const el of els) {
+    el.classList.remove('clash');
+    const lbl = el.parentElement;
+    if (lbl.style.display === 'none') continue;
+    const r = el.getBoundingClientRect();
+    if (r.width) boxes.push({ el, r });
+  }
+  boxes.sort((a, b) => b.r.bottom - a.r.bottom);
+  const kept = [];
+  for (const b of boxes) {
+    if (kept.some((k) => b.r.left < k.right + 4 && b.r.right > k.left - 4 && b.r.top < k.bottom + 2 && b.r.bottom > k.top - 2)) b.el.classList.add('clash');
+    else kept.push(b.r);
+  }
+}
 const clock = new THREE.Clock();
 let frameNo = 0;
 const lastView = new THREE.Matrix4();
@@ -472,6 +527,7 @@ function frame() {
   ocean.setSky(scene.background, ui.slot === 'night', sunDir.copy(sun.position).sub(sun.target.position).normalize());
   // 拉遠看全園時只留園區名稱；建築名稱、設施圖示、動物名牌拉近才出現（前後留一段緩衝，不會在門檻上閃爍）
   const dist = camera.position.distanceTo(controls.target), far = 220 * aspectK();
+  followShadow(dist);
   if (dist > far * 1.08) labels.domElement.classList.add('far');
   else if (dist < far) labels.domElement.classList.remove('far');
   // 遊客（含滑板、滑板車、直排輪）在園區鏡頭也要看得到：門檻比名牌遠 1.5 倍（手機的園區鏡頭比較遠），只有全景才藏
@@ -485,6 +541,7 @@ function frame() {
   if (!lastView.equals(camera.matrixWorld) || frameNo % 10 === 0) {
     lastView.copy(camera.matrixWorld);
     labels.render(scene, camera);
+    if (frameNo % 6 === 0) declutter();
   }
   requestAnimationFrame(frame);
 }

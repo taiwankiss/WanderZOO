@@ -506,3 +506,6 @@ body.night .rail button:not([aria-pressed="true"]):not([aria-expanded="true"]) {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* 建築名稱互相重疊時，被壓到的那個先藏起來（main.js 的 declutter） */
+.label-layer .zone-sm.clash { opacity: 0 !important; }

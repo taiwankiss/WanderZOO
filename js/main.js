@@ -156,6 +156,9 @@ function setSlot(id) {
   ui.setNight(id === 'night');
   animals.setNight(id === 'night');
   visitors.setVisible(id !== 'night');
+  // 晚上月光不投影：展場的光是加法貼片、不會被遮，月光的影子壓在燈光上會變成一塊塊暗斑，
+  // 而且陰影範圍跟著鏡頭距離縮放，拉到某個距離才突然出現
+  sun.castShadow = id !== 'night';
 }
 
 // ---------- 鏡頭 ----------

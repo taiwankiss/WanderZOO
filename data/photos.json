@@ -1584,5 +1584,369 @@
    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
    "source": "https://commons.wikimedia.org/wiki/File:%E3%82%AB%E3%83%96%E3%83%88%E3%83%A0%E3%82%B7.jpg"
   }
+ ],
+ "hornbill": [
+  {
+   "file": "images/animals/hornbill/1.jpg",
+   "title": "File:Great Hornbill (Buceros bicornis).jpg",
+   "author": "Malyasri Bhattacharya",
+   "license": "CC BY-SA 4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Great_Hornbill_(Buceros_bicornis).jpg"
+  },
+  {
+   "file": "images/animals/hornbill/2.jpg",
+   "title": "File:Great Hornbill at the Köln Zoo2.jpg",
+   "author": "Crosathorian",
+   "license": "CC BY 2.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Great_Hornbill_at_the_K%C3%B6ln_Zoo2.jpg"
+  },
+  {
+   "file": "images/animals/hornbill/3.jpg",
+   "title": "File:Great Pied Hornbill (74546937).jpeg",
+   "author": "Blackseablue",
+   "license": "CC BY 3.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Great_Pied_Hornbill_(74546937).jpeg"
+  }
+ ],
+ "gharial": [
+  {
+   "file": "images/animals/gharial/1.jpg",
+   "title": "File:False gharial (Tomistoma schlegelii), Gembira Loka Zoo, 2015-01-15 01.jpg",
+   "author": "Crisco 1492",
+   "license": "CC BY-SA 4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "source": "https://commons.wikimedia.org/wiki/File:False_gharial_(Tomistoma_schlegelii),_Gembira_Loka_Zoo,_2015-01-15_01.jpg"
+  },
+  {
+   "file": "images/animals/gharial/2.jpg",
+   "title": "File:Tomistoma schlegelii (2).jpg",
+   "author": "TimVickers",
+   "license": "Public domain",
+   "licenseUrl": "",
+   "source": "https://commons.wikimedia.org/wiki/File:Tomistoma_schlegelii_(2).jpg"
+  },
+  {
+   "file": "images/animals/gharial/3.jpg",
+   "title": "File:Buaya sepit Tomistoma schlegelii Bandung Zoo 1.jpg",
+   "author": "Ilham.nurwansah",
+   "license": "CC BY-SA 4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Buaya_sepit_Tomistoma_schlegelii_Bandung_Zoo_1.jpg"
+  }
+ ],
+ "clawedotter": [
+  {
+   "file": "images/animals/clawedotter/1.jpg",
+   "title": "File:Asian small-clawed otter (Aonyx cinereus) in Zooparc de Trégomeur, 2025.jpg",
+   "author": "Animalculum",
+   "license": "CC BY 4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Asian_small-clawed_otter_(Aonyx_cinereus)_in_Zooparc_de_Tr%C3%A9gomeur,_2025.jpg"
+  },
+  {
+   "file": "images/animals/clawedotter/2.jpg",
+   "title": "File:Oriental Small-clawed Otter (5741303665).jpg",
+   "author": "Gerwin Sturm from Vienna, Austria",
+   "license": "CC BY-SA 2.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Oriental_Small-clawed_Otter_(5741303665).jpg"
+  },
+  {
+   "file": "images/animals/clawedotter/3.jpg",
+   "title": "File:Oriental Small-clawed Otter (19622976355).jpg",
+   "author": "Mike Prince from Bangalore, India",
+   "license": "CC BY 2.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Oriental_Small-clawed_Otter_(19622976355).jpg"
+  }
+ ],
+ "tamarin": [
+  {
+   "file": "images/animals/tamarin/1.jpg",
+   "title": "File:Saguinus oedipus (Linnaeus, 1758).jpg",
+   "author": "Michael Gäbler",
+   "license": "CC BY-SA 3.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Saguinus_oedipus_(Linnaeus,_1758).jpg"
+  },
+  {
+   "file": "images/animals/tamarin/2.jpg",
+   "title": "File:Saguinus oedipus 62270441.jpg",
+   "author": "José Gabriel Julio Guzmán",
+   "license": "CC BY 4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Saguinus_oedipus_62270441.jpg"
+  },
+  {
+   "file": "images/animals/tamarin/3.jpg",
+   "title": "File:Cotton-top tamarin, ZOO Jihlava.jpg",
+   "author": "Atillak",
+   "license": "CC BY-SA 3.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Cotton-top_tamarin,_ZOO_Jihlava.jpg"
+  }
+ ],
+ "binturong": [
+  {
+   "file": "images/animals/binturong/1.jpg",
+   "title": "File:Head arctictis binturong JdP.jpg",
+   "author": "Jastrow",
+   "license": "Public domain",
+   "licenseUrl": "",
+   "source": "https://commons.wikimedia.org/wiki/File:Head_arctictis_binturong_JdP.jpg"
+  },
+  {
+   "file": "images/animals/binturong/2.jpg",
+   "title": "File:Arctictis binturong Ménagerie 20250913.jpg",
+   "author": "Marie-Lan Taÿ Pamart",
+   "license": "CC BY 4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Arctictis_binturong_M%C3%A9nagerie_20250913.jpg"
+  },
+  {
+   "file": "images/animals/binturong/3.jpg",
+   "title": "File:Binturong (Arctictis binturong) at Linton Zoo - geograph.org.uk - 6634360.jpg",
+   "author": "Tiger",
+   "license": "CC BY-SA 2.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Binturong_(Arctictis_binturong)_at_Linton_Zoo_-_geograph.org.uk_-_6634360.jpg"
+  }
+ ],
+ "panda": [
+  {
+   "file": "images/animals/panda/1.jpg",
+   "title": "File:Ailuropoda melanoleuca (Panda géant) - 445.jpg",
+   "author": "William Crochot (Medium69)",
+   "license": "CC BY-SA 4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Ailuropoda_melanoleuca_(Panda_g%C3%A9ant)_-_445.jpg"
+  },
+  {
+   "file": "images/animals/panda/2.jpg",
+   "title": "File:Panda géant - tête (Ailuropoda melanoleuca) (2).jpg",
+   "author": "Gzen92",
+   "license": "CC BY-SA 4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Panda_g%C3%A9ant_-_t%C3%AAte_(Ailuropoda_melanoleuca)_(2).jpg"
+  },
+  {
+   "file": "images/animals/panda/3.jpg",
+   "title": "File:Chengdu-pandas-d10.jpg",
+   "author": "Colegota",
+   "license": "CC BY-SA 2.5 es",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.5/es/deed.en",
+   "source": "https://commons.wikimedia.org/wiki/File:Chengdu-pandas-d10.jpg"
+  }
+ ],
+ "poultry": [
+  {
+   "file": "images/animals/poultry/1.jpg",
+   "title": "File:Rooster portrait, France.jpg",
+   "author": "Clément Bardot",
+   "license": "CC BY-SA 4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Rooster_portrait,_France.jpg"
+  },
+  {
+   "file": "images/animals/poultry/2.jpg",
+   "title": "File:Junglefowl on tree.jpg",
+   "author": "Philip Pikart",
+   "license": "CC BY-SA 4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Junglefowl_on_tree.jpg"
+  },
+  {
+   "file": "images/animals/poultry/3.jpg",
+   "title": "File:Feral rooster on Kauaʻi.jpg",
+   "author": "Frank Schulenburg",
+   "license": "CC BY-SA 4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Feral_rooster_on_Kaua%CA%BBi.jpg"
+  }
+ ],
+ "ringtail": [
+  {
+   "file": "images/animals/ringtail/1.jpg",
+   "title": "File:Ring tailed lemur portrait.jpg",
+   "author": "Francis C. Franklin",
+   "license": "CC BY-SA 3.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Ring_tailed_lemur_portrait.jpg"
+  },
+  {
+   "file": "images/animals/ringtail/2.jpg",
+   "title": "File:Ring tailed lemur and twins.jpg",
+   "author": "Sannse at English Wikipedia",
+   "license": "CC BY-SA 3.0",
+   "licenseUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+   "source": "https://commons.wikimedia.org/wiki/File:Ring_tailed_lemur_and_twins.jpg"
+  },
+  {
+   "file": "images/animals/ringtail/3.jpg",
+   "title": "File:Katta Lemur catta Wien Tiergarten Schönbrunn.jpg",
+   "author": "Isiwal",
+   "license": "CC BY-SA 4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Katta_Lemur_catta_Wien_Tiergarten_Sch%C3%B6nbrunn.jpg"
+  }
+ ],
+ "wildass": [
+  {
+   "file": "images/animals/wildass/1.jpg",
+   "title": "File:Equus africanus somaliensis - Réserve africaine de Sigean 01.jpg",
+   "author": "H. Zell",
+   "license": "CC BY-SA 3.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Equus_africanus_somaliensis_-_R%C3%A9serve_africaine_de_Sigean_01.jpg"
+  },
+  {
+   "file": "images/animals/wildass/2.jpg",
+   "title": "File:Equus africanus somaliensis 2.jpg",
+   "author": "Ericj",
+   "license": "CC BY-SA 3.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Equus_africanus_somaliensis_2.jpg"
+  },
+  {
+   "file": "images/animals/wildass/3.jpg",
+   "title": "File:Equus africanus somaliensis in Kazan 3.jpg",
+   "author": "Lumaca",
+   "license": "CC BY-SA 4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Equus_africanus_somaliensis_in_Kazan_3.jpg"
+  }
+ ],
+ "crownpigeon": [
+  {
+   "file": "images/animals/crownpigeon/1.jpg",
+   "title": "File:Victoria crowned pigeon (Goura victoria).jpg",
+   "author": "AntanO",
+   "license": "CC BY-SA 4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Victoria_crowned_pigeon_(Goura_victoria).jpg"
+  },
+  {
+   "file": "images/animals/crownpigeon/2.jpg",
+   "title": "File:Victoria Crowned Pigeon in captivity.jpg",
+   "author": "Jiafei Slay Queen",
+   "license": "CC0",
+   "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+   "source": "https://commons.wikimedia.org/wiki/File:Victoria_Crowned_Pigeon_in_captivity.jpg"
+  },
+  {
+   "file": "images/animals/crownpigeon/3.jpg",
+   "title": "File:Columbidae Goura victoria 4.jpg",
+   "author": "NasserHalaweh",
+   "license": "CC BY-SA 4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Columbidae_Goura_victoria_4.jpg"
+  }
+ ],
+ "python": [
+  {
+   "file": "images/animals/python/1.jpg",
+   "title": "File:Burmese Python photographed at Bardiya National Park2.jpg",
+   "author": "Shadow Ayush",
+   "license": "CC BY-SA 4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Burmese_Python_photographed_at_Bardiya_National_Park2.jpg"
+  },
+  {
+   "file": "images/animals/python/2.jpg",
+   "title": "File:Pythonidae Python bivittatus 2.jpg",
+   "author": "NasserHalaweh",
+   "license": "CC BY-SA 4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Pythonidae_Python_bivittatus_2.jpg"
+  },
+  {
+   "file": "images/animals/python/3.jpg",
+   "title": "File:Burmese Python (13), NPSPhoto, R. Cammauf (9101584016).jpg",
+   "author": "Everglades NPS from Homestead, Florida, United States",
+   "license": "Public domain",
+   "licenseUrl": "",
+   "source": "https://commons.wikimedia.org/wiki/File:Burmese_Python_(13),_NPSPhoto,_R._Cammauf_(9101584016).jpg"
+  }
+ ],
+ "tortoise": [
+  {
+   "file": "images/animals/tortoise/1.jpg",
+   "title": "File:Radiated tortoise (Astrochelys radiata) Tsimanampetsotsa.jpg",
+   "author": "Charles J. Sharp",
+   "license": "CC BY-SA 4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Radiated_tortoise_(Astrochelys_radiata)_Tsimanampetsotsa.jpg"
+  },
+  {
+   "file": "images/animals/tortoise/2.jpg",
+   "title": "File:Radiated Tortoise (Astrochelys radiata) (10292092024).jpg",
+   "author": "Bernard DUPONT from FRANCE",
+   "license": "CC BY-SA 2.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Radiated_Tortoise_(Astrochelys_radiata)_(10292092024).jpg"
+  },
+  {
+   "file": "images/animals/tortoise/3.jpg",
+   "title": "File:Astrochelys radiata -Roger Williams Park Zoo, USA-8a.jpg",
+   "author": "Kyle Bedell",
+   "license": "CC BY 2.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Astrochelys_radiata_-Roger_Williams_Park_Zoo,_USA-8a.jpg"
+  }
+ ],
+ "iguana": [
+  {
+   "file": "images/animals/iguana/1.jpg",
+   "title": "File:Iguana V.jpg",
+   "author": "Rjcastillo",
+   "license": "CC BY-SA 3.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Iguana_V.jpg"
+  },
+  {
+   "file": "images/animals/iguana/2.jpg",
+   "title": "File:Iguana in the Maracaibo wild.jpg",
+   "author": "Wilfredor",
+   "license": "CC BY-SA 3.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Iguana_in_the_Maracaibo_wild.jpg"
+  },
+  {
+   "file": "images/animals/iguana/3.jpg",
+   "title": "File:Iguana iguana Portoviejo 04.jpg",
+   "author": "Cayambe",
+   "license": "CC BY-SA 3.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Iguana_iguana_Portoviejo_04.jpg"
+  }
+ ],
+ "dartfrog": [
+  {
+   "file": "images/animals/dartfrog/1.jpg",
+   "title": "File:Strawberry poison dart frog (70539).jpg",
+   "author": "Rhododendrites",
+   "license": "CC BY-SA 4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Strawberry_poison_dart_frog_(70539).jpg"
+  },
+  {
+   "file": "images/animals/dartfrog/2.jpg",
+   "title": "File:Strawberry Poison Dart Frog (Oophaga pumilio) (52373289570).jpg",
+   "author": "Bernard DUPONT from FRANCE",
+   "license": "CC BY-SA 2.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Strawberry_Poison_Dart_Frog_(Oophaga_pumilio)_(52373289570).jpg"
+  },
+  {
+   "file": "images/animals/dartfrog/3.jpg",
+   "title": "File:Strawberry Poison Dart Frog (Oophaga pumilio) (52386759859).jpg",
+   "author": "Bernard DUPONT from FRANCE",
+   "license": "CC BY-SA 2.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Strawberry_Poison_Dart_Frog_(Oophaga_pumilio)_(52386759859).jpg"
+  }
  ]
 }

@@ -9,8 +9,47 @@ const T = (s) => (reduce ? 0.01 : s);
 const EASE = [0.22, 1, 0.36, 1]; // 很快起步、慢慢停下
 const CURTAIN = [0.76, 0, 0.24, 1]; // 布幕：慢起、中段快、慢收
 
-const seam = el.querySelector('.op-seam'), pct = el.querySelector('.op-pct');
+const seam = el.querySelector('.op-seam'), pct = el.querySelector('.op-pct'), run = el.querySelector('.op-run');
 let shown = 0;
+
+// 載入百分比下面原地跑的動物剪影：方塊風格（和園區的動物一樣），朝右。
+// vb：畫布寬高；parts：身體、頭、脖子等不動的方塊 [x, y, 寬, 高]；
+// legs：[髖關節 x, 髖關節 y, 腿寬, 相位]，腿長＝到畫布底；amp：腿前後擺的角度；cyc：跑一步的秒數
+const RUNNERS = {
+  elephant: { vb: [60, 40], amp: 18, cyc: 0.62, legs: [[12, 24, 7, 0], [21, 24, 7, 3], [36, 24, 7, 3], [45, 24, 7, 0]],
+    parts: [[8, 8, 40, 19], [44, 6, 12, 13], [40, 8, 8, 13], [53, 14, 4, 18], [56, 28, 3, 4], [4, 11, 5, 2]] },
+  giraffe: { vb: [50, 70], amp: 22, cyc: 0.7, legs: [[11, 40, 4, 0], [16, 40, 4, 3], [28, 40, 4, 3], [33, 40, 4, 0]],
+    parts: [[8, 30, 28, 11], [30, 8, 6, 26], [30, 4, 15, 6], [31, 0, 2, 4], [35, 0, 2, 4], [3, 31, 6, 2]] },
+  zebra: { vb: [50, 40], amp: 28, cyc: 0.46, legs: [[11, 22, 4, 0], [16, 22, 4, 2], [30, 22, 4, 3], [35, 22, 4, 5]],
+    parts: [[8, 12, 30, 11], [32, 4, 7, 14], [34, 2, 14, 7], [34, 0, 3, 3], [3, 13, 6, 3]] },
+  lion: { vb: [52, 34], amp: 30, cyc: 0.44, legs: [[13, 19, 4.5, 0], [18, 19, 4.5, 2], [32, 19, 4.5, 3], [37, 19, 4.5, 5]],
+    parts: [[9, 10, 30, 10], [35, 4, 12, 15], [42, 7, 9, 8], [2, 10, 8, 2.5], [0, 8, 3, 4]] },
+  rhino: { vb: [56, 34], amp: 18, cyc: 0.55, legs: [[11, 21, 6, 0], [17, 21, 6, 3], [30, 21, 6, 3], [36, 21, 6, 0]],
+    parts: [[6, 8, 34, 14], [38, 11, 14, 9], [49, 4, 3, 8], [45, 7, 2.5, 5], [38, 7, 3, 4], [2, 10, 5, 2]] },
+  bear: { vb: [48, 32], amp: 22, cyc: 0.5, legs: [[10, 20, 6, 0], [16, 20, 6, 3], [27, 20, 6, 3], [33, 20, 6, 0]],
+    parts: [[6, 8, 31, 13], [34, 9, 11, 10], [35, 6, 3, 4], [43, 13, 5, 4], [3, 10, 4, 3]] },
+};
+const FRAMES = 6; // 和 ui.css 的 op-frame 一致
+(function buildRunner() {
+  const names = Object.keys(RUNNERS), pick = new URLSearchParams(location.search).get('runner'); // ?runner=giraffe 指定一隻（檢查用）
+  const a = RUNNERS[pick] ?? RUNNERS[names[Math.floor(Math.random() * names.length)]];
+  const [W, H] = a.vb, k = (matchMedia('(max-width: 760px)').matches ? 22 : 26) / Math.max(H, 40); // 一個單位幾 px：高的長頸鹿也不超過 26 px
+  const box = ([x, y, w, h]) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx=".6"/>`;
+  let svgs = '';
+  for (let f = 0; f < FRAMES; f++) {
+    // 相位以 1/6 圈為單位：腿和身體對角的兩隻同步，像小跑步
+    const legs = a.legs.map(([x, y, w, ph]) => {
+      const ang = a.amp * Math.sin(((f + ph + 0.75) / FRAMES) * Math.PI * 2); // +0.75 格：沒有哪一格四條腿剛好都直立
+      return `<rect x="${x - w / 2}" y="${y - 1}" width="${w}" height="${H - y + 1}" rx=".6" transform="rotate(${ang.toFixed(1)} ${x} ${y})"/>`;
+    }).join('');
+    svgs += `<svg style="--k:${f}" viewBox="0 0 ${W} ${H}" width="${W * k}" height="${H * k}" overflow="visible">${legs}${a.parts.map(box).join('')}</svg>`;
+  }
+  const ani = run.querySelector('.ani');
+  Object.assign(ani.style, { width: `${W * k}px`, height: `${H * k}px` });
+  ani.style.setProperty('--cyc', `${a.cyc}s`);
+  ani.style.setProperty('--n', FRAMES);
+  ani.querySelector('.bob').innerHTML = svgs;
+})();
 
 // 主程式每完成一個載入階段就呼叫一次（0–100），next 是下一個階段的數字。
 // 蓋場景時主執行緒很忙、JS 停住、數字不會更新，所以：

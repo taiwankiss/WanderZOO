@@ -68,6 +68,27 @@ button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent
 .op-kicker { margin-bottom: 22px; color: var(--accent-ink); }
 .op-status { margin: 18px 0 0; font-size: 13px; letter-spacing: .2em; color: var(--muted); }
 .op-pct { display: inline-block; min-width: 2.2em; text-align: right; font: 500 13px var(--mono); letter-spacing: 0; color: var(--ink-2); }
+/* 標題微動態：每個字輕輕上下浮、微微轉，像一道慢慢往右走的波；綠點像呼吸一樣跳、外面一圈光暈散開。
+   只動 transform／opacity，蓋場景時主執行緒忙也照樣動 */
+.op-l { display: inline-block; animation: op-bob 3.2s ease-in-out infinite; animation-delay: calc(var(--i) * .13s - 3.2s); }
+@keyframes op-bob { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-.05em) rotate(-2deg); } }
+.op-dot { animation: op-pulse 1.6s ease-in-out infinite; }
+.op-dot::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--leaf); animation: op-ring 1.6s ease-out infinite; }
+@keyframes op-pulse { 0%, 100% { transform: scale(1); } 40% { transform: scale(1.25); } }
+@keyframes op-ring { 0% { transform: scale(1); opacity: .55; } 80%, 100% { transform: scale(2.8); opacity: 0; } }
+/* 載入百分比下面原地跑著一隻動物的側面剪影（js/opening.js 隨機挑一隻、畫出幾格跑步的姿勢）。
+   跑步是幾張 SVG 輪流顯示（opacity 逐格切換），身體上下彈，全部交給瀏覽器另外畫 */
+#opening .op-run { margin-top: 14px; }
+#opening .op-run .ani { position: relative; }
+#opening .op-run .bob { position: relative; width: 100%; height: 100%; animation: op-gallop calc(var(--cyc) / 2) ease-in-out infinite; }
+#opening .op-run svg { position: absolute; inset: 0; fill: var(--ink); opacity: 0; animation: op-frame var(--cyc) step-end infinite; animation-delay: calc((var(--k) - var(--n)) * var(--cyc) / var(--n)); }
+@keyframes op-gallop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9%); } }
+@keyframes op-frame { 0% { opacity: .82; } 16.667% { opacity: 0; } } /* 一圈 6 格，每格亮 1/6 */
+@media (prefers-reduced-motion: reduce) {
+  .op-l, .op-dot, .op-dot::after, #opening .op-run .bob { animation: none; }
+  #opening .op-run svg { animation: none; }
+  #opening .op-run svg:first-child { opacity: .82; }
+}
 body.opening .brand, body.opening .time, body.opening .rail button { opacity: 0; }
 
 

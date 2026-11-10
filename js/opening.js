@@ -74,7 +74,9 @@ export async function reveal(onOpen) {
   await new Promise((r) => setTimeout(r, reduce ? 0 : 200));
   onOpen?.();
   animate(seam, { opacity: 0 }, { duration: T(0.3) }); // 布幕從這條線分開
-  animate(el.querySelectorAll('.op-title'), { opacity: 0 }, { duration: T(0.6), ease: 'easeOut' });
+  // 標題退場：每個字依序往上飄走、淡出（ZOO 最後走），小字和綠點一起淡掉
+  animate(el.querySelectorAll('.op-l'), { y: [0, -36], rotate: [0, -6], opacity: [1, 0] }, { duration: T(0.55), delay: stagger(0.03), ease: [0.55, 0, 0.75, 0.2] });
+  animate(el.querySelectorAll('.op-kicker, .op-dot, .op-below'), { opacity: 0 }, { duration: T(0.5), ease: 'easeOut' });
   animate(el.querySelector('.op-curtain.top'), { y: ['0%', '-101%'] }, { duration: T(1.5), delay: T(0.15), ease: CURTAIN });
   const done = animate(el.querySelector('.op-curtain.bottom'), { y: ['0%', '101%'] }, { duration: T(1.5), delay: T(0.15), ease: CURTAIN });
   // 布幕拉開後，左上站名、時間軸、右側工具鈕依序淡入

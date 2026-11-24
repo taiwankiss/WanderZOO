@@ -12,6 +12,8 @@ export function createUI(data, on) {
   const panel = $('#panel');
   const card = $('#card');
   const isMobile = () => matchMedia('(max-width: 760px)').matches;
+  // 電腦版但視窗不夠寬（左邊卡片＋右邊選單會把地圖擠沒）：卡片和選單一次只出現一個（ui.css 同一個斷點）
+  const isNarrow = () => matchMedia('(min-width: 761px) and (max-width: 1199px)').matches;
   let slot = data.slots[0].id;
   let selected = null;
   let zoneCard = null; // 目前介紹的園區（沒有選動物時，左邊卡片介紹這個園區）
@@ -99,11 +101,11 @@ export function createUI(data, on) {
   }
   list.addEventListener('click', (e) => {
     const b = e.target.closest('[data-id]');
-    if (b) return on.select(b.dataset.id);
+    if (b) { if (isNarrow()) setMenu(false); return on.select(b.dataset.id); } // 不夠寬時點了就讓位給卡片（點已選的那隻也一樣）
     const z = e.target.closest('[data-zone]');
     if (!z) return;
     if (openZone === z.dataset.zone) return expandZone(null);
-    if (isMobile()) setMenu(false);
+    if (isMobile() || isNarrow()) setMenu(false);
     on.zone(z.dataset.zone);
   });
 
@@ -423,14 +425,14 @@ export function createUI(data, on) {
       document.querySelector('.map-nav.prev').disabled = i === 0;
       document.querySelector('.map-nav.next').disabled = i === animals.length - 1;
       expandZone(byId.get(id).zone);
-      setMenu(!isMobile()); // 手機版卡片蓋住下半部，抽屜先收起來
+      setMenu(!isMobile() && !isNarrow()); // 手機版卡片蓋住下半部，抽屜先收起來；不夠寬的電腦版讓位給卡片
       requestAnimationFrame(() => document.querySelector(`.row[data-id="${id}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
     },
     // 選到一個園區：展開那一區的動物清單（電腦版同時打開選單）
     showZone(id) {
       zoneCard = id;
       expandZone(id);
-      if (id && !isMobile()) setMenu(true);
+      if (id && !isMobile() && !isNarrow()) setMenu(true);
       if (id && !selected) { renderZoneCard(id); card.hidden = false; }
       if (!id && !selected) card.hidden = true;
     },

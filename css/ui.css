@@ -485,6 +485,11 @@ body.night .rail button:not([aria-pressed="true"]):not([aria-expanded="true"]) {
 #caption .cap-skip:hover { background: rgba(255, 255, 255, .22); }
 
 
+/* 電腦版但不夠寬：左邊卡片＋右邊選單會把地圖擠沒，打開選單時卡片先藏起來（關選單就回來；ui.js 的 isNarrow） */
+@media (min-width: 761px) and (max-width: 1199px) {
+  #app.menu-open #card { display: none; }
+}
+
 /* ---------- Mobile ---------- */
 @media (max-width: 760px) {
   .brand { top: 16px; left: 14px; }

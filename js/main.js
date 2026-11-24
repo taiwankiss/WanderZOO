@@ -468,7 +468,18 @@ function declutter() {
     if (r.width) boxes.push({ el, r });
   }
   boxes.sort((a, b) => b.r.bottom - a.r.bottom);
+  // 園區大名稱（例如「大貓熊館 Giant Panda House」）比建築名稱重要：看得到時先佔位，壓到它的建築名稱藏起來
   const kept = [];
+  for (const el of labels.domElement.querySelectorAll('.zone3d:not(.zone-sm)')) {
+    if (el.parentElement.style.display === 'none' || +getComputedStyle(el).opacity < 0.1) continue;
+    const r = el.getBoundingClientRect();
+    if (r.width) kept.push(r);
+  }
+  // 被卡片、右側選單蓋住一半的建築名稱也藏起來（不要露出半截字）
+  for (const el of [cardEl, panelEl]) {
+    const r = el.getBoundingClientRect();
+    if (r.width && !el.hidden && +getComputedStyle(el).opacity > 0.1) kept.push(r);
+  }
   for (const b of boxes) {
     if (kept.some((k) => b.r.left < k.right + 4 && b.r.right > k.left - 4 && b.r.top < k.bottom + 2 && b.r.bottom > k.top - 2)) b.el.classList.add('clash');
     else kept.push(b.r);
